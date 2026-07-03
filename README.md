@@ -136,3 +136,5 @@ MIT License
 ---
 
 > 本项目参加 [TRAE AI创造力大赛](https://trae.ai) · 学习工作赛道
+
+欢迎 Star 和 Fork

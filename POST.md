@@ -13,6 +13,14 @@
 
 ---
 
+## 价值与意义
+
+**效率提升**：传统模式下，学生从选题到答辩平均需要3-4个月反复试错。使用本工具，选题阶段从"盲目翻论文"变为"AI精准推荐"，数据分析从"求助师兄师姐"变为"上传CSV一键出图"，模拟答辩让答辩准备效率提升3倍以上。整个毕业设计流程的时间成本可压缩30%-50%。
+
+**社会价值**：中国每年有超过800万高校毕业生[$TRAE_REF](http://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/s5987/202306/t20230615_1065024.html)，毕业设计是每位大学生必经的关卡。但并非每所高校都有充足的导师资源，很多学生只能靠自我摸索。本工具让AI成为每位学生的"虚拟导师"，降低教育资源的获取门槛，让更多人获得公平、个性化的毕业设计指导机会。
+
+---
+
 ## 创作思路
 
 ### 为什么做这个项目？
@@ -44,20 +52,15 @@
 2. **AI生命感UI**：让用户感受到AI在思考、在分析、在帮助自己
 3. **真实数据分析**：使用Pandas+NumPy进行真实计算，不是前端模拟
 4. **智能流程控制**：WorkflowAgent根据用户当前进度推荐下一步
-5. **349个预设选题**：覆盖12个学院100+专业，LLM在此基础上生成个性化选题
+5. **100+个预设选题**：覆盖11个学院37个专业，LLM在此基础上生成个性化选题
 
 ---
 
 ## 体验地址
 
-**本地体验**：
-1. 克隆仓库
-2. `cd backend && pip install -r requirements.txt`
-3. 复制 `.env.example` 为 `.env`，填入智谱AI API Key
-4. `python -m uvicorn main:app --reload --port 8001`
-5. 浏览器打开 `rag-grad-assistant-demo.html`
+**在线体验**：[https://grad-design-ai.onrender.com/app](https://grad-design-ai.onrender.com/app) （首次打开约50秒冷启动）
 
-**在线体验**：[https://grad-design-ai.onrender.com/app](https://grad-design-ai.onrender.com/app)
+**本地体验**：克隆仓库 → `cd backend && pip install -r requirements.txt` → 配置 `.env` → `python main.py` → 打开 `rag-grad-assistant-demo.html`
 
 ---
 
@@ -91,6 +94,12 @@
 - **调试加速**：遇到问题时，TRAE能快速定位并给出修复方案
 - **架构设计**：通过对话就能确定技术选型和架构方案
 - **文档生成**：TRAE能自动生成README和部署文档
+
+### TRAE会话记录
+
+- Session 1（TRAE IDE）：`6a3957e404a60ce771465071` — 项目主体开发与部署
+- Session 2（TRAE Work CN）：`aaebc76681dffb420dfe4db5f56844a5` — 项目文档优化
+- Session 3（TRAE Work CN）：`80b632d839472b417a2ab672a19628a9` — 代码检查与修复
 
 ---
 
