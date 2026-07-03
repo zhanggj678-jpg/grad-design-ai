@@ -1,0 +1,34 @@
+# 环境变量（含API密钥，绝不能提交）
+.env
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 数据库
+*.db
+backend/database/grad_design.db
+
+# 测试
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TRAE工作目录
+.trae-cn/

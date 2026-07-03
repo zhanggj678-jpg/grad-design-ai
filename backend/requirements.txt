@@ -1,0 +1,31 @@
+# Web框架
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# 异步HTTP
+aiohttp>=3.9.0
+
+# 数据分析
+pandas>=2.0.0
+numpy>=1.24.0
+
+# 数据验证
+pydantic>=2.5.0
+
+# 环境变量
+python-dotenv>=1.0.0
+
+# 文件上传（FastAPI依赖）
+python-multipart>=0.0.6
+
+# 安全
+bcrypt>=4.1.0
+PyJWT>=2.8.0
+
+# 缓存（可选）
+redis>=5.0.0
+
+# 测试
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+httpx>=0.25.0

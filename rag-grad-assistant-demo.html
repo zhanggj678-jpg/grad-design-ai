@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI毕业设计全流程助手</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#6366f1;--primary-light:#818cf8;--primary-dark:#4f46e5;--primary-glow:rgba(99,102,241,.4);--accent:#10b981;--accent-light:#34d399;--accent-dark:#059669;--warn:#f59e0b;--bad:#ef4444;--bg:#0f172a;--bg2:#1e293b;--bg3:#334155;--surface:#1e293b;--surface2:#334155;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--border:#334155;--radius:12px;--shadow:0 4px 24px rgba(0,0,0,.3);--font:'Noto Sans SC','Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;--ai-bar-h:56px;--think-w:340px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.ai-status-bar{position:fixed;top:0;left:0;right:0;height:var(--ai-bar-h);background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(30,41,59,.95));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 28px;gap:14px;z-index:1000;transition:background .4s}
+.ai-status-bar.thinking{background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(99,102,241,.12))}
+.ai-status-bar.analyzing{background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(245,158,11,.12))}
+.ai-status-bar.generating{background:linear-gradient(135deg,rgba(15,23,42,.95),rgba(16,185,129,.12))}
+.ai-avatar-status{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;position:relative;flex-shrink:0;color:#fff}
+.ai-avatar-status .pulse-ring{position:absolute;inset:-5px;border-radius:50%;border:2px solid var(--primary);opacity:0;animation:none}
+.ai-status-bar.thinking .pulse-ring,.ai-status-bar.analyzing .pulse-ring,.ai-status-bar.generating .pulse-ring{animation:pulseRing 1.5s ease-out infinite}
+@keyframes pulseRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.9);opacity:0}}
+.ai-status-bar.thinking .ai-avatar-status{animation:breathGlow 2s ease-in-out infinite}
+.ai-status-bar.analyzing .ai-avatar-status{animation:breathGlow 1.5s ease-in-out infinite}
+.ai-status-bar.generating .ai-avatar-status{animation:breathGlow 1.2s ease-in-out infinite}
+@keyframes breathGlow{0%,100%{box-shadow:0 0 8px var(--primary-glow)}50%{box-shadow:0 0 24px var(--primary-glow),0 0 48px rgba(99,102,241,.15)}}
+.ai-status-label{font-size:13px;color:var(--text2);font-weight:500;white-space:nowrap}
+.ai-status-label .ai-name{color:var(--primary-light);font-weight:700}
+.ai-status-text{font-size:13px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.ai-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ai-status-dot.idle{background:var(--text3)}
+.ai-status-dot.thinking{background:var(--primary);animation:dotPulse 1s ease-in-out infinite}
+.ai-status-dot.analyzing{background:var(--warn);animation:dotPulse .8s ease-in-out infinite}
+.ai-status-dot.generating{background:var(--accent);animation:dotPulse .6s ease-in-out infinite}
+.ai-status-dot.done{background:var(--accent)}
+@keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+.thinking-dots{display:inline-flex;gap:4px;align-items:center;margin-left:6px}
+.thinking-dots span{width:5px;height:5px;border-radius:50%;background:var(--primary-light);animation:thinkingBounce .6s ease-in-out infinite}
+.thinking-dots span:nth-child(2){animation-delay:.15s}
+.thinking-dots span:nth-child(3){animation-delay:.3s}
+@keyframes thinkingBounce{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}}
+.welcome-screen{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2000;transition:opacity .8s,transform .8s}
+.welcome-screen.hidden{opacity:0;transform:scale(1.05);pointer-events:none}
+.welcome-avatar{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:800;color:#fff;animation:welcomeAvatarIn .8s cubic-bezier(.34,1.56,.64,1) forwards;opacity:0;transform:scale(0);box-shadow:0 0 80px var(--primary-glow)}
+@keyframes welcomeAvatarIn{0%{opacity:0;transform:scale(0)}100%{opacity:1;transform:scale(1)}}
+.welcome-text{margin-top:32px;font-size:20px;line-height:1.8;color:var(--text);max-width:560px;text-align:center;min-height:80px}
+.welcome-text .cursor-blink{display:inline-block;width:2px;height:22px;background:var(--primary-light);margin-left:2px;vertical-align:text-bottom;animation:cursorBlink 1s step-end infinite}
+@keyframes cursorBlink{0%,100%{opacity:1}50%{opacity:0}}
+.welcome-btn{margin-top:40px;padding:16px 48px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font);opacity:0;transform:translateY(20px);transition:all .3s}
+.welcome-btn.show{opacity:1;transform:translateY(0);animation:btnFloatIn .5s ease forwards}
+.welcome-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px var(--primary-glow)}
+@keyframes btnFloatIn{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+.container{max-width:1200px;margin:0 auto;padding:80px 24px 40px;display:none;padding-right:calc(24px + var(--think-w))}
+.container.show{display:block;animation:fadeInUp .6s ease}
+@media(max-width:1100px){.container{padding-right:24px}}
+@keyframes fadeInUp{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+.step-indicator{display:flex;justify-content:center;gap:8px;margin-bottom:32px;flex-wrap:wrap}
+.step-dot{width:40px;height:40px;border-radius:50%;background:var(--bg2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text3);cursor:pointer;transition:all .3s;position:relative}
+.step-dot.active{background:linear-gradient(135deg,var(--primary),var(--accent));border-color:transparent;color:#fff;box-shadow:0 0 20px var(--primary-glow)}
+.step-dot.completed{background:var(--accent);border-color:transparent;color:#fff}
+.step-dot::after{content:attr(data-label);position:absolute;top:48px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text3);white-space:nowrap;font-weight:500}
+.step-dot.active::after{color:var(--primary-light);font-weight:600}
+.step-content{display:none;animation:fadeInUp .5s ease}
+.step-content.active{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;box-shadow:var(--shadow);transition:all .3s}
+.card:hover{border-color:rgba(99,102,241,.3)}
+h2{font-size:20px;font-weight:700;margin-bottom:16px;color:var(--text);display:flex;align-items:center;gap:10px}
+h2 .icon{font-size:22px}
+.ai-tip{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(16,185,129,.08));border-left:3px solid var(--primary);padding:14px 18px;border-radius:0 8px 8px 0;margin-bottom:20px;font-size:14px;color:var(--text2);line-height:1.7}
+.ai-tip strong{color:var(--primary-light)}
+select,input[type="text"],input[type="email"],input[type="password"],textarea{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font-family:var(--font);font-size:14px;transition:all .2s}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;margin-bottom:6px;font-size:13px;font-weight:500;color:var(--text2)}
+.btn{padding:12px 28px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px var(--primary-glow)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-secondary{background:var(--bg3)}
+.btn-secondary:hover{background:var(--surface2);box-shadow:none}
+.btn-success{background:linear-gradient(135deg,var(--accent),var(--accent-dark))}
+.btn-success:hover{box-shadow:0 4px 16px rgba(16,185,129,.3)}
+.topic-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:20px}
+.topic-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;animation:cardIn .4s ease backwards}
+@keyframes cardIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
+.topic-card:hover{border-color:var(--primary);transform:translateY(-3px);box-shadow:0 8px 32px rgba(99,102,241,.15)}
+.topic-card.selected{border-color:var(--primary);background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(16,185,129,.04));box-shadow:0 0 24px rgba(99,102,241,.2)}
+.topic-card.selected::after{content:'✓ 已选择';position:absolute;top:12px;right:12px;background:var(--primary);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700}
+.ai-recommend-badge{position:absolute;top:12px;right:12px;background:rgba(99,102,241,.15);color:var(--primary-light);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+.topic-card.selected .ai-recommend-badge{display:none}
+.topic-tag{display:inline-block;padding:4px 10px;background:rgba(99,102,241,.1);color:var(--primary-light);border-radius:20px;font-size:11px;margin:0 6px 6px 0;font-weight:500}
+.topic-title{font-size:15px;font-weight:700;margin:8px 0 6px;color:var(--text);line-height:1.4}
+.topic-desc{font-size:13px;color:var(--text3);line-height:1.6}
+.topic-diff{display:flex;gap:4px;margin-top:10px}
+.diff-dot{width:8px;height:8px;border-radius:50%;background:var(--bg3);transition:all .2s}
+.diff-dot.filled{background:linear-gradient(135deg,var(--warn),#f97316)}
+.timeline{position:relative;padding-left:28px;margin-top:20px}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--primary),var(--accent));border-radius:1px}
+.timeline-item{position:relative;margin-bottom:20px;padding-left:16px;animation:fadeInUp .4s ease backwards}
+.timeline-dot{position:absolute;left:-24px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--primary);border:3px solid var(--bg);box-shadow:0 0 0 2px var(--primary)}
+.timeline-content{background:var(--bg2);padding:14px 18px;border-radius:8px;border:1px solid var(--border)}
+.timeline-title{font-weight:600;font-size:14px;margin-bottom:4px}
+.timeline-desc{font-size:13px;color:var(--text3);line-height:1.6}
+.upload-area{border:2px dashed var(--border);border-radius:var(--radius);padding:48px 24px;text-align:center;cursor:pointer;transition:all .3s;background:var(--surface)}
+.upload-area:hover{border-color:var(--primary);background:rgba(99,102,241,.04)}
+.upload-area.dragover{border-color:var(--accent);background:rgba(16,185,129,.04)}
+.upload-icon{font-size:40px;margin-bottom:12px;opacity:.6}
+.data-preview{display:none;margin-top:20px}
+.data-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.data-tab{padding:8px 16px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.data-tab.active{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-color:transparent}
+.data-tab-content{display:none}
+.data-tab-content.active{display:block;animation:fadeIn .3s ease}
+@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+th{background:var(--bg2);font-weight:600;color:var(--text2);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+tr:hover td{background:rgba(99,102,241,.04)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);padding:16px;border-radius:8px;text-align:center;border:1px solid var(--border);transition:all .2s}
+.stat-card:hover{border-color:var(--primary)}
+.stat-value{font-size:24px;font-weight:800;color:var(--primary-light);margin-bottom:4px}
+.stat-label{font-size:12px;color:var(--text3)}
+.chart-container{height:300px;margin-bottom:20px;background:var(--surface);border-radius:var(--radius);padding:16px;border:1px solid var(--border)}
+.chat-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;height:calc(100vh - 420px);min-height:180px}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{display:flex;gap:10px;animation:msgIn .3s ease}
+@keyframes msgIn{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+.chat-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.chat-bubble{background:var(--bg2);padding:12px 16px;border-radius:12px;border:1px solid var(--border);font-size:14px;line-height:1.7;max-width:calc(100% - 60px);word-break:break-word}
+.chat-msg.ai .chat-bubble{background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(16,185,129,.04));border-color:rgba(99,102,241,.2)}
+.chat-msg.user{flex-direction:row-reverse}
+.chat-msg.user .chat-bubble{background:var(--primary);color:#fff;border-color:transparent}
+.chat-input-area{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--bg2);align-items:center;position:relative;z-index:10}
+.chat-input-area input{flex:1;min-width:0;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+.chat-input-area input:focus{outline:none;border-color:var(--primary)}
+.chat-input-area button{padding:8px 12px;white-space:nowrap;flex-shrink:0;font-size:14px;min-width:52px;position:relative;z-index:11}
+.quick-questions{display:flex;gap:8px;padding:8px 16px;background:var(--bg2);border-top:1px solid var(--border);flex-wrap:wrap}
+.quick-q{padding:6px 14px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--text2);font-size:12px;cursor:pointer;font-family:var(--font);transition:all .2s}
+.quick-q:hover{border-color:var(--primary);color:var(--primary-light);background:rgba(99,102,241,.08)}
+.score-bar{height:6px;background:var(--bg3);border-radius:3px;margin-top:4px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;transition:width .6s ease}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface);border:1px solid var(--border);padding:14px 24px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:var(--shadow);z-index:3000;opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:10px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:rgba(16,185,129,.3);background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(16,185,129,.05))}
+.toast.error{border-color:rgba(239,68,68,.3);background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.05))}
+.think-stream{position:fixed;right:0;top:var(--ai-bar-h);width:var(--think-w);height:calc(100vh - var(--ai-bar-h));background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(15,23,42,.95));border-left:1px solid var(--border);padding:20px;overflow-y:auto;z-index:900;font-size:13px;line-height:1.7}
+.think-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.think-title::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--primary);animation:thinkPulse 2s ease-in-out infinite}
+@keyframes thinkPulse{0%,100%{opacity:1}50%{opacity:.3}}
+.think-msg{padding:10px 12px;background:rgba(99,102,241,.06);border-radius:8px;margin-bottom:8px;border-left:2px solid var(--primary);animation:thinkMsgIn .3s ease}
+@keyframes thinkMsgIn{0%{opacity:0;transform:translateX(10px)}100%{opacity:1;transform:translateX(0)}}
+.think-msg.success{border-left-color:var(--accent);background:rgba(16,185,129,.06)}
+.think-msg.warn{border-left-color:var(--warn);background:rgba(245,158,11,.06)}
+/* Multi-Agent 思考流消息类型样式 */
+.think-msg.thinking{border-left-color:var(--primary);background:rgba(99,102,241,.06)}
+.think-msg.analysis{border-left-color:var(--warn);background:rgba(245,158,11,.06)}
+.think-msg.result{border-left-color:var(--accent);background:rgba(16,185,129,.06)}
+.think-msg.warning{border-left-color:var(--bad);background:rgba(239,68,68,.06)}
+.think-msg.info{border-left-color:var(--text3);background:rgba(148,163,184,.06)}
+.think-msg .think-icon{margin-right:6px}
+.think-msg .think-time{color:var(--text3);font-size:11px;margin-left:auto}
+.quality-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.quality-item:last-child{border-bottom:none}
+.quality-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
+.quality-dot.good{background:var(--accent)}
+.quality-dot.warn{background:var(--warn)}
+.quality-dot.bad{background:var(--bad)}
+.quality-dot.info{background:var(--primary)}
+
+/* ========== 骨架屏样式 ========== */
+.skeleton{background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);background-size:200% 100%;animation:skeletonShimmer 1.5s ease-in-out infinite;border-radius:8px}
+@keyframes skeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-card{padding:20px;margin-bottom:16px}
+.skeleton-line{height:14px;margin-bottom:10px;border-radius:4px}
+.skeleton-line.short{width:60%}
+.skeleton-line.medium{width:80%}
+.skeleton-title{height:20px;width:50%;margin-bottom:16px}
+.skeleton-avatar{width:36px;height:36px;border-radius:50%}
+.skeleton-circle{width:48px;height:48px;border-radius:50%}
+
+/* ========== 亮色主题 ========== */
+body.light-theme{
+    --bg:#f8fafc;--bg2:#ffffff;--bg3:#e2e8f0;
+    --surface:#ffffff;--surface2:#f1f5f9;
+    --text:#1e293b;--text2:#475569;--text3:#94a3b8;
+    --border:#e2e8f0;
+    --primary:#4f46e5;--primary-light:#6366f1;--primary-dark:#4338ca;
+    --primary-glow:rgba(79,70,229,0.2);
+    --accent:#059669;--accent-light:#10b981;
+}
+body.light-theme .ai-status-bar{background:linear-gradient(135deg,rgba(248,250,252,.95),rgba(255,255,255,.95));border-bottom-color:var(--border)}
+body.light-theme .think-stream{background:linear-gradient(180deg,rgba(248,250,252,.98),rgba(255,255,255,.95));border-left-color:var(--border)}
+body.light-theme .chat-bubble{border-color:var(--border)}
+
+/* ========== 主题切换按钮 ========== */
+.theme-toggle{background:none!important;border:1px solid var(--border)!important;border-radius:50%!important;width:32px!important;height:32px!important;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:14px;margin-left:auto;transition:all .2s}
+.theme-toggle:hover{border-color:var(--primary)!important;color:var(--primary-light);background:rgba(99,102,241,.08)!important}
+
+/* ========== 语音输入按钮 ========== */
+.voice-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.voice-btn:hover{border-color:var(--primary);color:var(--primary-light);background:rgba(99,102,241,.08)}
+.voice-btn.recording{background:var(--bad);border-color:var(--bad);color:#fff;animation:pulseRing 1s ease-in-out infinite}
+
+/* ========== 响应式适配 ========== */
+@media(max-width:1100px){
+    .think-stream{display:none}
+    .container{padding-right:24px}
+    .topic-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+}
+
+@media(max-width:768px){
+    .container{padding:72px 16px 24px}
+    .topic-grid{grid-template-columns:1fr}
+    .step-dot{width:32px;height:32px;font-size:12px}
+    .step-dot::after{display:none}
+    .card{padding:20px}
+    .chat-container{height:350px}
+    .stat-grid{grid-template-columns:repeat(2,1fr)}
+    .auth-modal{width:95vw}
+}
+
+@media(max-width:480px){
+    .ai-status-bar{padding:0 16px;gap:10px}
+    .ai-status-label{display:none}
+    .welcome-avatar{width:80px;height:80px;font-size:32px}
+    .welcome-text{font-size:16px;padding:0 20px}
+    .welcome-btn{padding:14px 36px;font-size:14px}
+    h2{font-size:18px}
+}
+
+/* ========== 认证相关样式 ========== */
+.auth-bar{position:fixed;top:0;right:20px;height:var(--ai-bar-h);display:none;align-items:center;gap:8px;z-index:1001}
+.auth-btn{padding:6px 16px;border:1px solid var(--border);border-radius:20px;background:var(--bg2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .2s}
+.auth-btn:hover{border-color:var(--primary);color:var(--primary-light)}
+.auth-btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-color:transparent}
+.auth-btn.primary:hover{box-shadow:0 4px 12px var(--primary-glow)}
+.auth-user{color:var(--primary-light);font-size:13px;font-weight:600}
+.auth-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:2800;animation:fadeIn .2s ease}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:360px;max-width:90vw;box-shadow:var(--shadow);animation:authBoxIn .3s ease}
+@keyframes authBoxIn{0%{opacity:0;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}
+.auth-header{display:flex;justify-content:center;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border)}
+.auth-header h3{font-size:16px;font-weight:700;margin:0}
+.auth-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .2s}
+.auth-close:hover{background:var(--bg2);color:var(--text)}
+.auth-body{padding:24px}
+.auth-field{margin-bottom:16px}
+.auth-field label{display:block;margin-bottom:6px;font-size:13px;font-weight:500;color:var(--text2)}
+.auth-field input{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font-family:var(--font);font-size:14px}
+.auth-field input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+.auth-error{color:var(--bad);font-size:13px;margin-bottom:12px;min-height:18px}
+.auth-submit{width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s}
+.auth-submit:hover{transform:translateY(-1px);box-shadow:0 4px 16px var(--primary-glow)}
+.auth-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--text3)}
+.auth-switch a{color:var(--primary-light);cursor:pointer;font-weight:600}
+.auth-switch a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="welcome-screen" id="welcomeScreen"><div class="welcome-avatar">AI</div><div class="welcome-text" id="welcomeText"></div><button class="welcome-btn" id="welcomeBtn" onclick="enterApp()">开始使用</button></div>
+<div class="ai-status-bar" id="aiStatusBar" style="display:none"><div class="ai-avatar-status">AI<div class="pulse-ring"></div></div><span class="ai-status-label"><span class="ai-name">AI助手</span> · </span><span class="ai-status-text" id="aiStatusText">空闲，等待你的操作</span><div class="ai-status-dot idle" id="aiStatusDot"></div><button class="theme-toggle" onclick="toggleTheme()" title="切换主题"><span id="themeIcon">🌙</span></button></div>
+
+<div class="container" id="mainContainer">
+<div class="step-indicator" id="stepIndicator">
+<div class="step-dot active" data-step="1" data-label="选择专业" onclick="goToStep(1)">1</div>
+<div class="step-dot" data-step="2" data-label="生成选题" onclick="goToStep(2)">2</div>
+<div class="step-dot" data-step="3" data-label="研究思路" onclick="goToStep(3)">3</div>
+<div class="step-dot" data-step="4" data-label="报告提交" onclick="goToStep(4)">4</div>
+<div class="step-dot" data-step="5" data-label="模拟答辩" onclick="goToStep(5)">5</div>
+</div>
+
+<div class="step-content active" data-step="1">
+<div class="card">
+<h2><span class="icon">🎓</span>选择你的专业方向</h2>
+<div class="ai-tip"><strong>AI提示：</strong>选择正确的专业方向，AI将为你匹配最合适的毕业设计选题。请依次选择学院、专业和研究方向。</div>
+<div class="form-group"><label>所属学院</label><select id="deptSelect" onchange="onDeptChange()"><option value="">请选择学院</option></select></div>
+<div class="form-group"><label>专业</label><select id="majorSelect" onchange="onMajorChange()" disabled><option value="">请先选择学院</option></select></div>
+<div class="form-group"><label>研究方向</label><select id="directionSelect" disabled><option value="">请先选择专业</option></select></div>
+<div style="text-align:center;margin-top:24px"><button class="btn" id="btnToStep2" onclick="goToStep(2)" disabled>下一步：生成选题 <span style="font-size:16px">&rarr;</span></button></div>
+</div>
+</div>
+
+<div class="step-content" data-step="2">
+<div class="card">
+<h2><span class="icon">💡</span>AI推荐选题</h2>
+<div class="ai-tip" id="topicDesc"><strong>AI提示：</strong>基于你的专业方向，AI已为你筛选出以下高匹配度选题。点击卡片查看详情并选择。</div>
+<div class="topic-grid" id="topicGrid"></div>
+<div style="text-align:center;margin-top:24px"><button class="btn" id="btnToStep3" onclick="goToStep(3)" disabled>下一步：查看研究思路 <span style="font-size:16px">&rarr;</span></button></div>
+</div>
+</div>
+
+<div class="step-content" data-step="3">
+<div class="card">
+<h2><span class="icon">📋</span>研究方案</h2>
+<div class="ai-tip"><strong>AI提示：</strong>以下是针对你选题的完整研究方案，包含技术路线、时间安排和关键节点。</div>
+<h3 id="researchTitle" style="font-size:16px;color:var(--primary-light);margin-bottom:8px"></h3>
+<p id="researchDesc" style="font-size:13px;color:var(--text3);margin-bottom:16px"></p>
+<div id="researchOverview" style="margin-bottom:20px"></div>
+<div id="researchTimeline"></div>
+<div style="text-align:center;margin-top:24px"><button class="btn" id="btnToStep4" onclick="goToStep(4)">下一步：提交报告 <span style="font-size:16px">&rarr;</span></button></div>
+</div>
+</div>
+
+<div class="step-content" data-step="4">
+<div class="card">
+<h2><span class="icon">📝</span>提交论文报告</h2>
+<div class="ai-tip" id="reportTip"><strong>AI提示：</strong>在答辩前，把你的论文内容提交给AI进行预审。AI将从结构完整性、研究方法、创新性、数据分析、参考文献等维度给出评分和改进建议，并生成精准的答辩问题。</div>
+
+<!-- 报告提交区 -->
+<div id="reportSubmitArea">
+  <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+    <textarea id="reportText" placeholder="在此粘贴你的论文内容（摘要、引言、研究方法、数据分析、结论等）&#10;&#10;支持粘贴论文全文，越完整AI评审越精准..." style="width:100%;min-height:240px;padding:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;line-height:1.8;font-family:var(--font);resize:vertical"></textarea>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <button class="btn btn-success" onclick="submitReport()">🤖 AI评审论文</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('reportFileInput').click()">📄 上传文件</button>
+    <input type="file" id="reportFileInput" accept=".txt,.md,.zip,.rar,.7z" style="display:none" onchange="handleReportFile(event)">
+  </div>
+  <div style="margin-top:12px;padding:10px 16px;background:rgba(99,102,241,.1);border-radius:8px;font-size:12px;color:var(--text3)">
+    💡 提示：支持上传 .txt / .md 文本文件，或 .zip 压缩包（内含代码、PPT、报告等）。AI将自动识别压缩包内容并进行综合评审
+  </div>
+</div>
+
+<!-- 分析结果区域（提交后显示） -->
+<div id="reportResultArea" style="display:none">
+  <!-- 评分总览 -->
+  <div class="stat-grid" id="reportScoreGrid" style="margin-bottom:20px"></div>
+  
+  <!-- Agent思考流将在提交论文后自动展示 -->
+  <div id="reportReviewContent"></div>
+  
+  <!-- 各维度评分详情 -->
+  <div class="card" style="background:var(--bg2);padding:20px;margin-bottom:16px">
+    <h3 style="font-size:15px;margin-bottom:16px">📊 AI评审报告</h3>
+    <div id="dimensionScores"></div>
+  </div>
+  
+  <!-- 答辩问题预测 -->
+  <div class="card" style="background:var(--bg2);padding:20px;margin-bottom:16px">
+    <h3 style="font-size:15px;margin-bottom:16px">🎯 答辩问题预测</h3>
+    <div id="predictedQuestions"></div>
+  </div>
+  
+  <!-- 改进建议 -->
+  <div class="card" style="background:var(--bg2);padding:20px;margin-bottom:16px">
+    <h3 style="font-size:15px;margin-bottom:16px">💪 改进建议</h3>
+    <div id="improvementTips"></div>
+  </div>
+  
+  <!-- 操作按钮 -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px">
+    <button class="btn" onclick="goToStep(5)">下一步：模拟答辩 <span style="font-size:16px">&rarr;</span></button>
+    <button class="btn btn-secondary" onclick="exportReviewReport()">📥 下载评审报告</button>
+    <button class="btn btn-secondary" onclick="resetReport()">🔄 重新提交</button>
+  </div>
+</div>
+
+<!-- 分隔线：下方为辅助功能 -->
+<div style="margin:32px 0 16px;border-top:1px solid var(--border);padding-top:16px">
+  <span style="background:var(--bg);padding:0 12px;font-size:13px;color:var(--text3)">辅助功能</span>
+</div>
+
+<!-- CSV数据分析（折叠式，保持原有功能） -->
+<details style="margin-top:16px">
+<summary style="cursor:pointer;padding:12px 16px;background:var(--bg2);border-radius:8px;font-size:14px;font-weight:600;color:var(--text2)">📊 CSV数据分析（选填）</summary>
+<div style="padding:16px 0">
+<div class="upload-area" id="uploadArea" onclick="document.getElementById('csvInput').click()">
+<div class="upload-icon">📁</div>
+<div style="font-size:14px;font-weight:600;margin-bottom:4px">点击或拖拽上传CSV文件</div>
+<div style="font-size:12px;color:var(--text3)">支持 .csv 格式，最大 10MB（仅用于数据探索，非必填）</div>
+</div>
+<input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleFileSelect(event)">
+<div class="data-preview" id="dataPreview" style="display:none;margin-top:16px">
+<div class="data-tabs" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px">
+<div class="data-tab active" onclick="switchDataTab(this,'overview')">数据概览</div>
+<div class="data-tab" onclick="switchDataTab(this,'table')">数据预览</div>
+<div class="data-tab" onclick="switchDataTab(this,'stats')">统计摘要</div>
+<div class="data-tab" onclick="switchDataTab(this,'charts')">可视化</div>
+<div class="data-tab" onclick="switchDataTab(this,'quality')">质量报告</div>
+<div class="data-tab" onclick="switchDataTab(this,'correlation')">相关性</div>
+<div class="data-tab" onclick="switchDataTab(this,'advice')">建模建议</div>
+<div class="data-tab" onclick="switchDataTab(this,'paper')">论文描述</div>
+</div>
+<div class="data-tab-content active" id="tab-overview"><div class="stat-grid" id="dataStats"></div></div>
+<div class="data-tab-content" id="tab-table"><table id="dataTable"></table></div>
+<div class="data-tab-content" id="tab-stats"><div id="fieldSummary"></div></div>
+<div class="data-tab-content" id="tab-charts"><div id="chartsContainer"></div></div>
+<div class="data-tab-content" id="tab-quality"><div id="qualityReport"></div></div>
+<div class="data-tab-content" id="tab-correlation"><div id="correlationMatrix"></div></div>
+<div class="data-tab-content" id="tab-advice"><div id="modelingAdvice"></div></div>
+<div class="data-tab-content" id="tab-paper"><div id="paperDescription"></div></div>
+</div>
+</div>
+</details>
+</div>
+</div>
+
+<div class="step-content" data-step="5">
+<div class="card">
+<h2><span class="icon">🎤</span>模拟答辩</h2>
+<div class="ai-tip"><strong>AI提示：</strong>AI将扮演答辩评委，针对你的选题提出专业问题。认真回答，获得评分和反馈。</div>
+<div style="text-align:center;margin-bottom:20px">
+<button class="btn btn-success" onclick="startDefense()">🎓 开始模拟答辩</button>
+<button class="btn btn-secondary" onclick="showScore()">📊 查看评分</button>
+<button class="btn btn-secondary" onclick="startDefense()">🔄 重新答辩</button>
+</div>
+<div class="chat-container">
+<div class="chat-messages" id="chatMessages"></div>
+<div class="quick-questions" id="quickQuestions"></div>
+<div class="chat-input-area">
+<button class="voice-btn" id="voiceBtn" onclick="toggleRecording()" title="语音输入">🎤</button>
+<input type="text" id="chatInput" placeholder="输入你的回答..." onkeypress="if(event.key==='Enter')sendAnswer()">
+<button class="btn" onclick="sendAnswer()">发送</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="think-stream" id="thinkStream">
+<div class="think-title">AI思考流</div>
+<div id="thinkContent"></div>
+</div>
+
+<script>
+const state={currentStep:1,dept:'',major:'',direction:'',selectedTopic:null,csvData:null,csvHeaders:[],defenseIndex:0,defenseScore:{innovation:0,technique:0,logic:0,presentation:0},sessionId:null,defenseQuestionsList:[],currentQuestionIndex:0};
+
+// ========== localStorage 数据持久化 ==========
+const STORAGE_KEY = 'grad_design_state';
+
+function saveState() {
+    const data = {
+        currentStep: state.currentStep,
+        dept: state.dept,
+        major: state.major,
+        direction: state.direction,
+        selectedTopic: state.selectedTopic,
+        defenseScore: state.defenseScore,
+        sessionId: state.sessionId,
+        timestamp: Date.now()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function loadState() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return false;
+        const data = JSON.parse(saved);
+        if (data.dept) state.dept = data.dept;
+        if (data.major) state.major = data.major;
+        if (data.direction) state.direction = data.direction;
+        if (data.selectedTopic) state.selectedTopic = data.selectedTopic;
+        if (data.currentStep) state.currentStep = data.currentStep;
+        if (data.defenseScore) state.defenseScore = data.defenseScore;
+        if (data.sessionId) state.sessionId = data.sessionId;
+        return true;
+    } catch (e) {
+        console.warn('[Storage] 加载状态失败:', e);
+        return false;
+    }
+}
+
+function clearState() {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+}
+
+// ========== 工具函数 ==========
+
+// 延时函数
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// 打字机效果（通用）
+function typeWriter(element, text, speed = 30) {
+    return new Promise(resolve => {
+        let i = 0;
+        element.textContent = '';
+        function type() {
+            if (i < text.length) {
+                element.textContent += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+            } else {
+                resolve();
+            }
+        }
+        type();
+    });
+}
+
+// ========== Multi-Agent 思考流系统 ==========
+
+// Agent配置：定义不同Agent的头像、颜色、名称
+const AGENT_CONFIG = {
+    planner:    { avatar: 'P', color: '#6366f1', name: '规划Agent' },
+    researcher: { avatar: 'R', color: '#10b981', name: '研究Agent' },
+    analyst:    { avatar: 'A', color: '#f59e0b', name: '分析Agent' },
+    critic:     { avatar: 'C', color: '#ef4444', name: '评审Agent' },
+    writer:     { avatar: 'W', color: '#ec4899', name: '写作Agent' },
+    data:       { avatar: 'D', color: '#06b6d4', name: '数据Agent' },
+    qa:         { avatar: 'Q', color: '#8b5cf6', name: '答辩Agent' },
+};
+
+// 添加Agent思考消息到思考流
+function addAgentMessage(agent) {
+    const stream = document.getElementById('thinkContent');
+    if (!stream) return;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `think-msg ${agent.msg_type}`;
+    msgDiv.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="width:22px;height:22px;border-radius:50%;background:${agent.color};
+                display:flex;align-items:center;justify-content:center;font-size:9px;
+                font-weight:800;color:#fff;flex-shrink:0">${agent.avatar}</span>
+            <span style="font-size:11px;font-weight:600;color:${agent.color}">${agent.name}</span>
+            <span class="think-time">${agent.timestamp}</span>
+        </div>
+        <div class="think-content" style="font-size:12px;color:var(--text2);line-height:1.6"></div>
+    `;
+    stream.appendChild(msgDiv);
+    stream.scrollTop = stream.scrollHeight;
+
+    // 打字机效果
+    const contentEl = msgDiv.querySelector('.think-content');
+    return typeWriter(contentEl, agent.content, 25);
+}
+
+// 依次展示多个Agent消息
+async function showAgentThinkingStream(messages) {
+    for (const msg of messages) {
+        await addAgentMessage(msg);
+        await sleep(800); // 每条消息间隔800ms
+    }
+}
+
+// 生成带时间戳的Agent消息
+function createAgentMsg(agentKey, msgType, content) {
+    const config = AGENT_CONFIG[agentKey] || { avatar: 'AI', color: '#6366f1', name: 'AI助手' };
+    return {
+        avatar: config.avatar,
+        color: config.color,
+        name: config.name,
+        msg_type: msgType, // thinking / analysis / result / warning
+        content: content,
+        timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    };
+}
+
+// ========== 骨架屏 ==========
+
+// 生成骨架屏卡片HTML
+function createSkeletonCards(count = 4) {
+    let html = '<div class="skeleton-container">';
+    for (let i = 0; i < count; i++) {
+        html += `
+        <div class="card skeleton-card">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line medium"></div>
+            <div class="skeleton skeleton-line short"></div>
+        </div>`;
+    }
+    html += '</div>';
+    return html;
+}
+
+// 生成骨架屏时间线HTML
+function createSkeletonTimeline() {
+    return `
+    <div class="skeleton-container">
+        <div class="skeleton skeleton-line" style="width:40%;margin-bottom:20px"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line medium"></div>
+        <div class="skeleton skeleton-line short" style="margin-bottom:20px"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line medium"></div>
+    </div>`;
+}
+
+// ========== 主题切换 ==========
+
+// 切换暗黑/亮色主题
+function toggleTheme() {
+    const body = document.body;
+    const icon = document.getElementById('themeIcon');
+    if (body.classList.contains('light-theme')) {
+        body.classList.remove('light-theme');
+        icon.textContent = '🌙';
+        localStorage.setItem('theme', 'dark');
+    } else {
+        body.classList.add('light-theme');
+        icon.textContent = '☀️';
+        localStorage.setItem('theme', 'light');
+    }
+}
+
+// 初始化主题（从localStorage恢复）
+function initTheme() {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light') {
+        document.body.classList.add('light-theme');
+        const icon = document.getElementById('themeIcon');
+        if (icon) icon.textContent = '☀️';
+    }
+}
+
+// ========== 语音输入（答辩阶段） ==========
+
+let recognition = null;
+let isRecording = false;
+
+// 初始化语音识别
+function initSpeechRecognition() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        return false;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'zh-CN';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onresult = function(event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        const input = document.getElementById('chatInput');
+        if (input) input.value = transcript;
+    };
+
+    recognition.onend = function() {
+        isRecording = false;
+        updateRecordButton();
+    };
+
+    return true;
+}
+
+// 切换录音状态
+function toggleRecording() {
+    if (!recognition && !initSpeechRecognition()) {
+        showToast('您的浏览器不支持语音输入', 'error');
+        return;
+    }
+
+    if (isRecording) {
+        recognition.stop();
+    } else {
+        recognition.start();
+        isRecording = true;
+        updateRecordButton();
+    }
+}
+
+// 更新录音按钮状态
+function updateRecordButton() {
+    const btn = document.getElementById('voiceBtn');
+    if (!btn) return;
+    if (isRecording) {
+        btn.classList.add('recording');
+        btn.innerHTML = '⏹';
+    } else {
+        btn.classList.remove('recording');
+        btn.innerHTML = '🎤';
+    }
+}
+
+// ========== API 客户端 ==========
+const API_BASE=window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1'?'http://localhost:8001':window.location.origin;
+const api={
+  async request(path,opts={}){
+    const url=API_BASE+path;
+    const res=await fetch(url,{...opts,headers:{'Content-Type':'application/json',...opts.headers}});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.detail||data.error||`HTTP ${res.status}`);
+    return data;
+  },
+  async post(path,body){return this.request(path,{method:'POST',body:JSON.stringify(body)})},
+  async get(path){return this.request(path,{method:'GET'})},
+
+  // 工作流
+  createSession(){return this.post('/workflow/session',{})},
+  getRecommend(sid){return this.get('/workflow/recommend/'+sid)},
+  getProgress(sid){return this.get('/workflow/progress/'+sid)},
+  getSession(sid){return this.get('/workflow/session/'+sid)},
+
+  // 选题
+  generateTopics(sid,dept,major,direction,count=4){
+    return this.post('/topics/generate',{session_id:sid,dept,major,direction,count});
+  },
+  selectTopic(sid,topicId){return this.post('/topics/select',{session_id:sid,topic_id:topicId})},
+  getResearchPlan(sid){return this.post('/topics/research-plan',{session_id:sid})},
+
+  // 数据分析
+  uploadCSV(sid,file){
+    const fd=new FormData();fd.append('session_id',sid);fd.append('file',file);
+    return fetch(API_BASE+'/analysis/upload',{method:'POST',body:fd}).then(r=>r.json());
+  },
+  getAnalysis(sid){return this.get('/analysis/result/'+sid)},
+
+  // 答辩
+  generateQuestions(sid,count=6){return this.post('/defense/questions',{session_id:sid,count})},
+  evaluateAnswer(sid,question,answer,qidx=0){
+    return this.post('/defense/evaluate',{session_id:sid,question,answer,question_index:qidx});
+  },
+  getDefenseHistory(sid){return this.get('/defense/history/'+sid)},
+  getDefenseReport(sid){return this.post('/defense/report',{session_id:sid})},
+
+  // 认证
+  register(u,e,p){return this.post('/auth/register',{username:u,email:e,password:p})},
+  login(u,p){return this.post('/auth/login',{username:u,password:p})},
+
+  // 论文评审
+  reportReview(sid,title,content){
+    return this.post('/analysis/report-review',{session_id:sid,title,content});
+  },
+};
+
+// 初始化会话
+async function initSession(){
+  try{
+    const res=await api.createSession();
+    if(res.session_id){state.sessionId=res.session_id;console.log('[API] Session created:',res.session_id);}
+  }catch(e){console.warn('[API] Create session failed:',e.message);}
+}
+initSession();
+
+// ========== 认证相关 ==========
+let currentUser=null,authToken=null;
+
+function showAuthModal(type='login'){
+  let m=document.getElementById('authModal');
+  if(!m){m=document.createElement('div');m.id='authModal';m.className='auth-modal';document.body.appendChild(m);}
+  const isLogin=type==='login';
+  m.innerHTML='<div class="auth-box">'+
+    '<div class="auth-header"><h3>'+(isLogin?'🔐 登录':'📝 注册')+'</h3><button class="auth-close" onclick="hideAuthModal()">&times;</button></div>'+
+    '<div class="auth-body">'+
+      '<div class="auth-field"><label>用户名</label><input type="text" id="authUsername" placeholder="3-20个字符"></div>'+
+      (!isLogin?'<div class="auth-field"><label>邮箱</label><input type="email" id="authEmail" placeholder="your@email.com"></div>':'')+
+      '<div class="auth-field"><label>密码</label><input type="password" id="authPassword" placeholder="至少6位"></div>'+
+      '<div class="auth-error" id="authError"></div>'+
+      '<button class="auth-submit" onclick="'+(isLogin?'doLogin()':'doRegister()')+'">'+(isLogin?'登录':'注册')+'</button>'+
+      '<div class="auth-switch">'+(isLogin?'还没有账号？<a onclick="showAuthModal(\'register\')">立即注册</a>':'已有账号？<a onclick="showAuthModal(\'login\')">立即登录</a>')+'</div>'+
+    '</div></div>';
+  m.style.display='flex';
+}
+function hideAuthModal(){document.getElementById('authModal').style.display='none';}
+function showAuthError(msg){document.getElementById('authError').textContent=msg;}
+
+async function doLogin(){
+  const u=document.getElementById('authUsername').value.trim(),p=document.getElementById('authPassword').value;
+  if(!u||!p){showAuthError('请填写完整信息');return;}
+  try{
+    const res=await api.login(u,p);
+    if(res.success){authToken=res.token;currentUser={id:res.user_id,username:res.username};hideAuthModal();updateAuthUI();showToast('登录成功！','success');}
+    else{showAuthError(res.error||'登录失败');}
+  }catch(e){showAuthError('网络错误：'+e.message);}
+}
+
+async function doRegister(){
+  const u=document.getElementById('authUsername').value.trim(),e=document.getElementById('authEmail').value.trim(),p=document.getElementById('authPassword').value;
+  if(!u||!e||!p){showAuthError('请填写完整信息');return;}
+  try{
+    const res=await api.register(u,e,p);
+    if(res.success){authToken=res.token;currentUser={id:res.user_id,username:res.username};hideAuthModal();updateAuthUI();showToast('注册成功！','success');}
+    else{showAuthError(res.error||'注册失败');}
+  }catch(err){showAuthError('网络错误：'+err.message);}
+}
+
+function logout(){currentUser=null;authToken=null;updateAuthUI();showToast('已退出登录','info');}
+
+function updateAuthUI(){
+  let bar=document.getElementById('authBar');
+  if(!bar){bar=document.createElement('div');bar.id='authBar';bar.className='auth-bar';document.body.appendChild(bar);}
+  if(currentUser){
+    bar.innerHTML='<span class="auth-user">👤 '+currentUser.username+'</span><button class="auth-btn" onclick="logout()">退出</button>';
+    bar.style.display='flex';
+  }else{
+    bar.innerHTML='<button class="auth-btn" onclick="showAuthModal(\'login\')">登录</button><button class="auth-btn primary" onclick="showAuthModal(\'register\')">注册</button>';
+    bar.style.display='flex';
+  }
+}
+
+// 页面加载后显示认证栏
+document.addEventListener('DOMContentLoaded',updateAuthUI);
+
+const defenseQuestions={opening:'你好！我是你的答辩评委。今天我们将围绕「{topic}」进行模拟答辩。请你简要介绍一下这个选题的背景和研究意义。',questions:[{q:'你的研究采用了哪些技术方法？',score:{innovation:5,technique:8,logic:5,presentation:5},hint:'从方法、工具、框架等角度回答'},{q:'你的创新点在哪里？',score:{innovation:10,technique:5,logic:5,presentation:5},hint:'突出与现有研究的区别'},{q:'数据来源是什么？如何保证数据的可靠性？',score:{innovation:3,technique:8,logic:6,presentation:3},hint:'说明数据来源和验证方法'},{q:'研究过程中遇到的最大困难是什么？如何解决的？',score:{innovation:5,technique:6,logic:8,presentation:6},hint:'展示问题解决能力'},{q:'你的研究成果有什么实际应用价值？',score:{innovation:7,technique:5,logic:6,presentation:7},hint:'从实际应用角度阐述'},{q:'如果继续深入研究，你会从哪些方面展开？',score:{innovation:8,technique:5,logic:7,presentation:5},hint:'展示对领域的深入理解'}]};
+
+const majorData={cs:{name:'计算机学院',majors:{se:{name:'软件工程',directions:['Web开发','移动应用开发','软件测试','DevOps']},cs:{name:'计算机科学与技术',directions:['人工智能','大数据','网络安全','云计算']},ds:{name:'数据科学与大数据技术',directions:['数据分析','数据挖掘','机器学习','数据可视化']},ai:{name:'人工智能',directions:['深度学习','自然语言处理','计算机视觉','强化学习']},nw:{name:'网络工程',directions:['网络架构','网络安全','5G通信','物联网']}}},ee:{name:'电子信息学院',majors:{ee:{name:'电子信息工程',directions:['嵌入式系统','信号处理','通信系统','物联网']},ce:{name:'通信工程',directions:['5G技术','光纤通信','卫星通信','无线传感']},ae:{name:'自动化',directions:['工业控制','机器人','PLC编程','智能系统']},me:{name:'测控技术与仪器',directions:['传感器技术','精密测量','智能仪表','虚拟仪器']}}},biz:{name:'商学院',majors:{fin:{name:'金融学',directions:['量化投资','风险管理','金融科技','区块链']},acc:{name:'会计学',directions:['智能财务','审计分析','税务筹划','管理会计']},mkt:{name:'市场营销',directions:['数字营销','消费者行为','品牌管理','电商运营']},hr:{name:'人力资源管理',directions:['人才测评','绩效管理','组织行为','薪酬设计']}}},art:{name:'艺术学院',majors:{gd:{name:'视觉传达设计',directions:['UI/UX设计','品牌设计','动态设计','交互设计']},id:{name:'工业设计',directions:['产品设计','用户体验','智能产品','可持续设计']},ani:{name:'动画',directions:['3D动画','游戏设计','虚拟现实','特效制作']},arch:{name:'环境设计',directions:['室内设计','景观设计','展示设计','参数化设计']}}},lang:{name:'外国语学院',majors:{en:{name:'英语',directions:['翻译技术','语料库语言学','英语教学','跨文化交际']},jp:{name:'日语',directions:['商务日语','日语教育','翻译研究','日本文化']},kr:{name:'韩语',directions:['韩流文化','商务韩语','翻译研究','韩国社会']},fr:{name:'法语',directions:['法语文学','翻译研究','商务法语','法国文化']}}},math:{name:'数学学院',majors:{am:{name:'应用数学',directions:['数值分析','优化算法','金融数学','密码学']},stat:{name:'统计学',directions:['数据建模','时间序列','贝叶斯统计','实验设计']},fm:{name:'金融数学',directions:['量化金融','风险管理','衍生品定价','投资组合']},bi:{name:'信息与计算科学',directions:['科学计算','图像处理','机器学习','数据挖掘']}}},phy:{name:'物理学院',majors:{ep:{name:'应用物理学',directions:['光电技术','量子信息','材料物理','计算物理']},op:{name:'光电信息科学与工程',directions:['光纤通信','激光技术','光电子器件','光学设计']},mp:{name:'材料物理',directions:['纳米材料','半导体材料','新能源材料','超导材料']}}},chem:{name:'化学学院',majors:{ac:{name:'应用化学',directions:['分析化学','有机合成','催化化学','电化学']},ce:{name:'化学工程与工艺',directions:['化工设计','过程控制','催化反应','分离工程']},pm:{name:'药物化学',directions:['药物合成','药物分析','天然产物','计算机辅助药物设计']}}},eco:{name:'经济学院',majors:{ec:{name:'经济学',directions:['宏观经济','微观经济','计量经济','行为经济']},fin:{name:'金融工程',directions:['衍生品定价','量化交易','风险管理','资产定价']},it:{name:'国际经济与贸易',directions:['国际贸易','跨境电商','供应链管理','外商投资']}}},law:{name:'法学院',majors:{law:{name:'法学',directions:['民商法','刑法','经济法','国际法']},ip:{name:'知识产权',directions:['专利法','商标法','著作权法','技术转移']}}},med:{name:'医学院',majors:{cm:{name:'临床医学',directions:['内科','外科','儿科','急诊医学']},ph:{name:'药学',directions:['药物分析','药剂学','药理学','临床药学']},nm:{name:'护理学',directions:['临床护理','社区护理','老年护理','护理管理']}}}};
+
+const topicPool={cs:{se:[{title:'基于微服务架构的校园二手交易平台设计与实现',desc:'设计并实现一个基于Spring Cloud微服务架构的校园二手交易平台，包含用户管理、商品发布、即时通讯、支付集成等核心功能模块。',diff:3,tags:['Spring Cloud','Vue.js','MySQL','Redis']},{title:'基于DevOps的自动化部署系统研究与实现',desc:'研究DevOps理念在软件开发中的应用，设计并实现一套包含CI/CD流水线、自动化测试、容器化部署的完整解决方案。',diff:4,tags:['Docker','Jenkins','Kubernetes','GitLab CI']},{title:'基于React Native的跨平台移动应用开发框架研究',desc:'深入研究React Native框架原理，开发一个具有完整业务逻辑的跨平台移动应用，对比原生开发的性能差异。',diff:3,tags:['React Native','TypeScript','Redux','Node.js']},{title:'基于行为驱动开发的软件测试自动化平台',desc:'设计并实现一个支持BDD（行为驱动开发）的自动化测试平台，支持用自然语言编写测试用例并自动生成测试代码。',diff:4,tags:['Cucumber','Selenium','Python','TestNG']}],cs:[{title:'基于深度学习的恶意软件检测系统',desc:'利用卷积神经网络和循环神经网络，设计并实现一个能够自动识别和分类恶意软件的检测系统，准确率目标达到95%以上。',diff:4,tags:['Python','TensorFlow','CNN','网络安全']},{title:'基于区块链的学术成果存证系统',desc:'利用区块链技术的不可篡改特性，设计一个学术成果存证平台，解决学术不端和成果归属问题。',diff:3,tags:['Ethereum','Solidity','IPFS','Web3.js']},{title:'基于联邦学习的隐私保护数据挖掘平台',desc:'研究联邦学习算法，在保护数据隐私的前提下实现多方数据协同挖掘，应用于医疗或金融领域。',diff:5,tags:['Python','PySyft','联邦学习','密码学']},{title:'基于零信任架构的企业网络安全防护系统',desc:'设计并实现一套基于零信任理念的网络安全防护体系，包含身份认证、设备验证、最小权限访问控制等核心模块。',diff:4,tags:['零信任','身份认证','微分段','SIEM']}],ds:[{title:'基于用户行为分析的电商推荐系统优化',desc:'利用协同过滤和深度学习算法，分析用户行为数据，设计更精准的个性化推荐系统，提升点击率和转化率。',diff:3,tags:['Python','Spark','推荐算法','A/B测试']},{title:'基于时空数据的城市交通拥堵预测模型',desc:'利用出租车GPS数据、道路传感器数据，构建时空图神经网络模型，实现城市交通拥堵的实时预测和预警。',diff:4,tags:['Python','PyTorch','图神经网络','GIS']},{title:'基于NLP的社交媒体舆情分析系统',desc:'利用自然语言处理技术，对微博、知乎等社交媒体数据进行情感分析和主题建模，实现舆情监控和预警。',diff:3,tags:['Python','BERT','情感分析','爬虫']},{title:'基于知识图谱的智能问答系统构建',desc:'构建领域知识图谱，结合预训练语言模型，实现基于知识图谱的智能问答系统，支持多轮对话和推理。',diff:4,tags:['Neo4j','BERT','知识图谱','NLP']}],ai:[{title:'基于Transformer的中文法律文书智能生成系统',desc:'利用GPT类大语言模型，针对法律文书领域进行微调，实现合同、起诉书等法律文书的智能生成和审核。',diff:4,tags:['Python','Transformers','法律NLP','文本生成']},{title:'基于强化学习的游戏AI agent设计与训练',desc:'利用深度强化学习算法（DQN、PPO等），训练能够在复杂游戏环境中自主决策的AI智能体。',diff:4,tags:['Python','PyTorch','RL','OpenAI Gym']},{title:'基于多模态融合的短视频内容理解系统',desc:'融合视频、音频、文本等多模态信息，构建短视频内容理解和推荐系统，实现精准的内容分类和个性化推荐。',diff:4,tags:['Python','PyTorch','多模态','推荐系统']},{title:'基于图神经网络的社交网络影响力分析',desc:'利用图神经网络（GNN）分析社交网络中的用户关系和信息传播路径，识别关键影响者和社区结构。',diff:5,tags:['Python','PyTorch Geometric','GNN','社交网络分析']}],nw:[{title:'基于SDN的校园网络智能运维平台设计',desc:'利用软件定义网络（SDN）技术，设计校园网络智能运维平台，实现流量监控、故障检测和自动修复。',diff:3,tags:['OpenFlow','Mininet','Python','网络监控']},{title:'基于5G边缘计算的物联网网关系统',desc:'设计基于5G边缘计算的物联网网关系统，实现低延迟数据处理和智能设备管理。',diff:4,tags:['5G','边缘计算','MQTT','Docker']}]},
+ee:{ee:[{title:'基于FPGA的实时图像边缘检测系统设计',desc:'利用FPGA并行计算优势，实现高速实时图像边缘检测算法的硬件加速，应用于工业视觉检测领域。',diff:3,tags:['FPGA','Verilog','图像处理','EDA']},{title:'基于STM32的智能温室环境监控系统',desc:'设计基于STM32微控制器的智能温室监控系统，集成温湿度、光照、CO2等多传感器数据采集与自动控制。',diff:3,tags:['STM32','传感器','PID控制','嵌入式']},{title:'基于DSP的语音降噪系统设计与实现',desc:'利用数字信号处理器实现高效的语音降噪算法，对比分析不同滤波算法的性能表现。',diff:3,tags:['DSP','FFT','滤波器','MATLAB']}],ce:[{title:'基于LoRa的智慧农业远程监测系统',desc:'设计基于LoRa低功耗广域网的农业环境监测系统，实现远距离、低功耗的数据传输与设备管理。',diff:3,tags:['LoRa','物联网','STM32','无线通信']},{title:'基于软件无线电的信号解调系统设计',desc:'利用SDR平台设计灵活可重构的通信信号解调系统，支持多种调制方式的自动识别与解调。',diff:4,tags:['SDR','GNU Radio','信号处理','Python']},{title:'基于MIMO技术的WiFi性能优化研究',desc:'研究多输入多输出天线技术对WiFi通信性能的提升，设计仿真实验验证不同MIMO配置下的吞吐量和稳定性。',diff:3,tags:['MIMO','WiFi6','NS3仿真','信道建模']}],ae:[{title:'基于ROS的室内服务机器人导航系统',desc:'利用ROS机器人操作系统，实现室内服务机器人的SLAM建图、路径规划和避障功能。',diff:4,tags:['ROS','SLAM','激光雷达','Python']},{title:'基于PID自整定的温度控制系统设计',desc:'设计一种基于模糊PID自整定算法的温度控制系统，通过MATLAB仿真和实际硬件验证控制效果。',diff:3,tags:['PID','模糊控制','MATLAB','PLC']},{title:'基于机器视觉的工业产品缺陷检测系统',desc:'利用工业相机和OpenCV实现流水线产品的表面缺陷自动检测与分类，提升质检效率。',diff:4,tags:['OpenCV','机器视觉','深度学习','工业4.0']},{title:'基于PLC的四轴码垛机器人控制系统',desc:'设计基于西门子/三菱PLC的四轴码垛机器人控制系统，实现物料自动识别、抓取和码垛功能。',diff:3,tags:['PLC','伺服电机','工控','自动化']}],me:[{title:'基于MEMS的便携式空气质量检测仪设计',desc:'设计基于MEMS传感器阵列的便携式空气质量检测仪，支持PM2.5、甲醛、温湿度等多参数检测。',diff:3,tags:['MEMS','传感器','单片机','PCB设计']},{title:'基于LabVIEW的虚拟仪器自动测试平台',desc:'利用LabVIEW虚拟仪器软件开发自动化测试平台，实现多通道信号采集、分析与报表生成。',diff:3,tags:['LabVIEW','数据采集','NI硬件','测试自动化']}]},
+biz:{fin:[{title:'基于机器学习的P2P借贷违约风险预测模型',desc:'利用随机森林和XGBoost算法构建P2P借贷违约风险预测模型，实现借款人信用评估和风险预警。',diff:3,tags:['Python','XGBoost','风控模型','数据分析']},{title:'基于量化策略的股票收益率预测研究',desc:'研究多种量化交易策略在A股市场的表现，结合机器学习方法优化策略参数，构建自动交易回测系统。',diff:4,tags:['Python','量化分析','回测框架','时间序列']},{title:'基于区块链的供应链金融平台设计',desc:'利用区块链技术设计供应链金融服务平台，解决中小企业融资难、信息不对称等问题。',diff:3,tags:['区块链','供应链','智能合约','Hyperledger']},{title:'基于文本挖掘的金融市场情绪分析',desc:'利用NLP技术分析财经新闻和社交媒体文本，构建金融市场情绪指标，研究与股价波动的关系。',diff:3,tags:['Python','NLP','情感分析','金融数据']}],acc:[{title:'基于RPA的财务报表自动处理系统',desc:'利用机器人流程自动化（RPA）技术，设计财务报表自动抓取、清洗和生成的解决方案。',diff:3,tags:['RPA','Python','OCR','财务自动化']},{title:'基于数据挖掘的上市公司财务风险预警模型',desc:'利用上市公司的财务数据，通过数据挖掘方法构建财务风险预警模型，实现风险的前瞻性识别。',diff:3,tags:['Python','数据挖掘','财务分析','预警模型']},{title:'基于XBRL的企业财务报告标准化平台',desc:'研究XBRL标准在企业财务报告中的应用，设计财务数据的标准化录入、校验和展示平台。',diff:3,tags:['XBRL','财务报告','标准化','Web应用']}],mkt:[{title:'基于大数据的消费者购买行为分析与精准营销策略',desc:'利用电商平台用户行为数据，构建消费者画像和购买预测模型，提出精准营销策略建议。',diff:3,tags:['Python','用户画像','聚类分析','营销分析']},{title:'基于社交媒体的品牌口碑传播影响力分析',desc:'抓取微博、小红书等平台数据，分析品牌口碑传播路径和KOL影响力，构建传播效果评估模型。',diff:3,tags:['Python','网络爬虫','社交分析','品牌管理']},{title:'基于A/B测试的电商页面转化率优化研究',desc:'设计并实施电商网站关键页面的A/B测试实验，分析不同设计元素对转化率的影响。',diff:3,tags:['A/B测试','转化率','实验设计','数据统计']}],hr:[{title:'基于自然语言处理的招聘简历智能筛选系统',desc:'利用NLP技术对求职者简历进行自动解析和岗位匹配，提升HR招聘效率和匹配准确度。',diff:3,tags:['Python','NLP','文本分类','HR系统']},{title:'基于数据挖掘的员工流失预警模型研究',desc:'利用企业HR数据构建员工离职预测模型，识别关键流失因素并提出针对性保留策略。',diff:3,tags:['Python','数据挖掘','预测模型','HR分析']}]},
+art:{gd:[{title:'基于情感化设计的适老化移动应用界面研究',desc:'针对老年用户群体进行情感化设计研究，设计并实现一套适老化移动应用UI组件库。',diff:3,tags:['UI设计','适老化','用户研究','Figma']},{title:'基于数据可视化的城市文化信息展示系统设计',desc:'利用D3.js等可视化技术，设计城市文化遗产信息的交互式数据可视化展示系统。',diff:3,tags:['数据可视化','D3.js','交互设计','文化展示']},{title:'基于眼动追踪的用户体验评估方法研究',desc:'结合眼动追踪技术分析用户在网页浏览中的视觉行为模式，提出基于视觉热力图的UX优化方案。',diff:4,tags:['眼动追踪','用户体验','实验设计','视觉分析']}],id:[{title:'基于人机工程学的智能轮椅交互设计',desc:'基于人机工程学原理，对智能轮椅的操作界面和交互方式进行优化设计，提升老年和残障用户的使用体验。',diff:3,tags:['人机工程学','产品设计','用户研究','无障碍设计']},{title:'基于可持续设计理念的快递包装优化方案',desc:'从可持续设计角度出发，研究快递包装材料的减量化、可循环利用设计方案。',diff:3,tags:['可持续设计','包装设计','材料研究','环保']},{title:'基于参数化设计的3D打印灯具产品开发',desc:'利用参数化设计工具（Grasshopper）生成可定制化灯具模型，通过3D打印实现小批量生产。',diff:3,tags:['参数化设计','3D打印','Rhino','产品开发']}],ani:[{title:'基于物理模拟的角色动画生成技术研究',desc:'研究基于物理引擎的角色动画生成方法，提升动画中角色运动的真实感和流畅性。',diff:4,tags:['物理模拟','Blender','角色动画','实时渲染']},{title:'基于AI辅助的二维动画关键帧自动生成系统',desc:'利用深度学习技术实现二维动画中间帧的自动生成，减轻动画师手工绘制的工作量。',diff:4,tags:['深度学习','动画生成','Blender','GAN']}],arch:[{title:'基于参数化设计的校园景观规划方案',desc:'利用参数化设计方法进行校园公共空间景观规划，考虑光照、人流、植被等多因素优化。',diff:3,tags:['参数化设计','景观规划','Grasshopper','环境设计']},{title:'基于VR技术的室内设计方案预览系统',desc:'开发基于VR技术的室内设计方案预览系统，支持用户沉浸式浏览和实时修改设计方案。',diff:4,tags:['VR','Unity3D','室内设计','交互体验']}]},
+lang:{en:[{title:'基于语料库的中英学术文本对比分析与翻译策略研究',desc:'利用自建平行语料库，分析中英学术论文在体裁结构和语言特征上的差异，提出针对性的翻译策略。',diff:3,tags:['语料库','翻译研究','学术英语','对比分析']},{title:'基于自然语言处理的英语作文自动评分系统',desc:'利用NLP技术对英语作文进行语法、词汇、连贯性等多维度自动评分，并与人工评分进行对比验证。',diff:3,tags:['NLP','自动评分','英语教学','Python']},{title:'基于社交媒体语料的网络英语变异现象研究',desc:'收集Twitter、微博等社交媒体平台英文文本，分析网络英语在拼写、语法、语义层面的变异规律。',diff:3,tags:['社会语言学','语料分析','网络语言','变异研究']}],jp:[{title:'基于中日对译语料库的翻译等值研究',desc:'构建中日对译语料库，研究不同类型文本中翻译等值现象的分布规律和影响因素。',diff:3,tags:['中日翻译','语料库','翻译等值','日语教育']},{title:'日语学习者中介语系统中的母语迁移现象分析',desc:'通过语料分析研究中国日语学习者在语法、词汇层面的母语迁移现象及其对学习效果的影响。',diff:3,tags:['中介语','语言迁移','日语教学','二语习得']}]},
+math:{am:[{title:'基于深度强化学习的组合优化问题求解研究',desc:'研究深度强化学习算法在旅行商问题（TSP）和车辆路径问题（VRP）等经典组合优化问题中的应用效果。',diff:5,tags:['强化学习','组合优化','PyTorch','运筹学']},{title:'基于偏微分方程的图像去噪模型研究',desc:'研究基于全变分（TV）和扩散方程的图像去噪模型，对比分析不同PDE模型在图像恢复中的效果。',diff:4,tags:['偏微分方程','图像处理','MATLAB','数值方法']}],stat:[{title:'基于贝叶斯层次模型的学生成绩影响因素分析',desc:'构建贝叶斯层次模型分析学生成绩的多层影响因素（学校、班级、个体），给出教育政策建议。',diff:4,tags:['贝叶斯统计','层次模型','R语言','教育数据']},{title:'基于时间序列模型的GDP增长率预测与区间估计',desc:'利用ARIMA、Prophet等时间序列模型对我国GDP季度数据进行建模和预测，给出置信区间。',diff:3,tags:['时间序列','ARIMA','预测','R语言']},{title:'基于多重插补法的调查数据缺失值处理研究',desc:'研究多重插补法（MICE）在处理调查问卷缺失数据中的应用效果，与删除法和均值插补法进行对比。',diff:3,tags:['缺失值处理','多重插补','R语言','统计方法']}],fm:[{title:'基于Monte Carlo模拟的期权定价与风险度量',desc:'利用Monte Carlo方法对欧式和亚式期权进行定价，计算VaR和ES等风险度量指标。',diff:4,tags:['Monte Carlo','期权定价','VaR','金融工程']},{title:'基于Copula模型的资产组合风险分析',desc:'利用Copula函数刻画多资产收益率之间的相依结构，评估投资组合的尾部风险。',diff:4,tags:['Copula','风险管理','投资组合','金融统计']}],bi:[{title:'基于深度学习的蛋白质结构预测方法研究',desc:'研究AlphaFold等深度学习方法在蛋白质结构预测中的原理和效果，在小规模数据集上进行复现实验。',diff:5,tags:['深度学习','蛋白质','生物信息','PyTorch']},{title:'基于稀疏表示的图像超分辨率重建算法',desc:'研究基于字典学习和稀疏表示的图像超分辨率重建方法，对比不同算法在峰值信噪比上的表现。',diff:4,tags:['稀疏表示','超分辨率','图像处理','MATLAB']}]},
+phy:{ep:[{title:'基于第一性原理计算的二维材料电子结构研究',desc:'利用密度泛函理论（DFT）计算新型二维过渡金属硫化物的电子结构和光学性质。',diff:5,tags:['DFT','VASP','二维材料','凝聚态物理']},{title:'基于机器学习的水下目标声学识别算法',desc:'利用机器学习方法对水下声学信号进行特征提取和目标分类，应用于水下目标识别领域。',diff:4,tags:['机器学习','声学信号','特征提取','Python']},{title:'基于量子力学模拟的氢分子键合过程可视化',desc:'利用Python数值模拟氢分子形成过程中电子云分布的变化，开发交互式可视化程序。',diff:3,tags:['量子力学','数值模拟','Python','可视化']}],op:[{title:'基于光纤布拉格光栅的应变温度双参量传感系统',desc:'设计基于FBG的应变温度双参量传感器，实现工程结构健康监测中的高精度测量。',diff:4,tags:['光纤传感','FBG','光通信','传感器']},{title:'基于液晶可调谐滤波器的光谱成像系统设计',desc:'利用液晶的电光效应设计可调谐滤波器，构建高光谱成像系统，应用于遥感或生物医学领域。',diff:4,tags:['液晶','光谱成像','光学设计','光电检测']}],mp:[{title:'基于溶胶-凝胶法的纳米TiO2光催化剂制备与性能研究',desc:'采用溶胶-凝胶法制备纳米TiO2光催化剂，研究不同制备条件对其光催化降解有机物性能的影响。',diff:3,tags:['纳米材料','TiO2','光催化','材料制备']},{title:'基于第一性原理的钙钛矿太阳能电池材料筛选',desc:'利用高通量计算方法筛选新型钙钛矿结构光伏材料，预测其光电转换效率和稳定性。',diff:5,tags:['钙钛矿','太阳能电池','高通量计算','DFT']}]},
+chem:{ac:[{title:'基于分子对接的药物活性化合物虚拟筛选',desc:'利用分子对接软件（AutoDock）对化合物库进行虚拟筛选，寻找潜在的药物活性分子。',diff:4,tags:['分子对接','AutoDock','药物设计','计算化学']},{title:'基于化学计量学的白酒品质快速检测方法',desc:'利用近红外光谱结合化学计量学方法（PCA、PLS-DA）建立白酒品质快速分类和定量模型。',diff:3,tags:['化学计量学','近红外','PCA','品质检测']},{title:'基于电化学传感器的环境重金属离子检测',desc:'设计并制备基于纳米材料修饰的电化学传感器，实现对水环境中重金属离子的高灵敏度检测。',diff:4,tags:['电化学','传感器','纳米材料','环境检测']}],ce:[{title:'基于Aspen Plus的化工过程模拟与优化设计',desc:'利用Aspen Plus流程模拟软件对化工生产过程进行建模和优化，分析不同操作参数对产品收率的影响。',diff:4,tags:['Aspen Plus','化工模拟','过程优化','系统工程']},{title:'基于响应面法的催化反应工艺参数优化',desc:'利用响应面法（RSM）优化催化反应的关键工艺参数（温度、压力、空速），建立预测模型。',diff:3,tags:['响应面法','催化反应','工艺优化','实验设计']}],pm:[{title:'基于计算机辅助药物设计的靶向抗肿瘤化合物筛选',desc:'利用分子动力学模拟和药效团模型，筛选针对特定靶点的抗肿瘤先导化合物。',diff:5,tags:['CADD','分子动力学','抗肿瘤','药物设计']},{title:'基于中药活性成分的网络药理学分析',desc:'利用网络药理学方法分析中药方剂中活性成分-靶点-疾病的关联网络，揭示其多靶点作用机制。',diff:3,tags:['网络药理学','中药','靶点预测','生物信息']}],
+eco:{ec:[{title:'基于面板数据模型的区域经济增长影响因素分析',desc:'利用中国省级面板数据，构建固定效应和随机效应模型，分析产业结构、人力资本等因素对区域经济增长的影响。',diff:3,tags:['面板数据','计量经济','区域经济','Stata']},{title:'基于VAR模型的货币政策对房价传导机制研究',desc:'利用向量自回归（VAR）模型分析货币政策工具（利率、M2）对房地产市场的动态传导效应。',diff:4,tags:['VAR模型','货币政策','房价','宏观调控']},{title:'基于结构方程模型的消费者绿色消费意愿研究',desc:'利用结构方程模型（SEM）分析消费者绿色消费意愿的影响因素及其传导路径。',diff:3,tags:['SEM','绿色消费','消费者行为','问卷调查']}],fin:[{title:'基于Copula-VaR模型的股票市场系统性风险评估',desc:'利用Copula函数和VaR模型对A股市场进行系统性风险评估，分析极端市场条件下的尾部风险传染。',diff:4,tags:['Copula','VaR','系统性风险','金融工程']},{title:'基于机器学习的信用违约互换（CDS）定价模型',desc:'利用梯度提升树和神经网络方法构建CDS定价模型，与经典结构化模型进行对比验证。',diff:4,tags:['机器学习','CDS','信用风险','衍生品定价']}],it:[{title:'基于跨境电商数据的中国出口贸易竞争力分析',desc:'利用海关数据和跨境电商平台数据，分析中国出口产品在全球市场的竞争力演变趋势。',diff:3,tags:['跨境电商','贸易数据','竞争力','数据分析']},{title:'基于引力模型的中国-东盟贸易流量影响因素研究',desc:'利用扩展的引力模型分析中国与东盟国家贸易流量的决定因素，评估RCEP协定的贸易创造效应。',diff:3,tags:['引力模型','中国-东盟','RCEP','国际贸易']}]},
+law:{law:[{title:'基于大数据的刑事判决量刑偏差分析',desc:'利用中国裁判文书网的刑事判决数据，统计分析不同地区、法院、法官在量刑上的偏差，提出规范化建议。',diff:4,tags:['法律大数据','量刑分析','裁判文书','司法公正']},{title:'人工智能生成内容的著作权归属问题研究',desc:'分析AIGC作品在现有著作权法框架下的保护困境，比较各国立法实践，提出法律适用建议。',diff:3,tags:['AIGC','著作权','知识产权','比较法']},{title:'基于区块链的电子存证法律效力研究',desc:'研究区块链技术在司法存证中的应用现状，分析其证据能力和证明力的法律认定标准。',diff:3,tags:['区块链','电子存证','证据法','司法科技']}],ip:[{title:'基于专利数据的战略性新兴产业技术创新趋势分析',desc:'利用专利数据库对战略性新兴产业的专利申请数据进行文本挖掘和趋势分析。',diff:3,tags:['专利分析','技术创新','数据挖掘','产业政策']},{title:'标准必要专利（SEP）许可中的FRAND原则适用研究',desc:'研究标准必要专利许可中公平、合理、无歧视（FRAND）原则的适用标准和司法实践。',diff:4,tags:['标准必要专利','FRAND','专利许可','知识产权法']}]},
+med:{cm:[{title:'基于深度学习的医学影像（CT/MRI）病灶自动检测',desc:'利用U-Net等深度学习模型实现CT或MRI影像中病灶区域的自动检测与分割，辅助临床诊断。',diff:4,tags:['深度学习','U-Net','医学影像','计算机辅助诊断']},{title:'基于多变量统计的慢性病危险因素分析',desc:'利用队列研究数据，通过Cox比例风险模型和Logistic回归分析慢性病（糖尿病/高血压）的危险因素。',diff:3,tags:['Cox模型','慢性病','流行病学','SPSS']},{title:'基于电子病历数据的临床决策支持系统设计',desc:'利用NLP技术从非结构化电子病历中提取关键临床信息，构建辅助诊断和用药推荐系统。',diff:4,tags:['NLP','电子病历','临床决策','自然语言处理']}],ph:[{title:'基于网络药理学的中药复方作用机制研究',desc:'利用网络药理学和分子对接方法，研究某经典中药复方的有效成分-靶点-疾病作用通路。',diff:4,tags:['网络药理学','中药复方','分子对接','作用机制']},{title:'基于LC-MS/MS的中药成分代谢组学分析方法建立',desc:'建立基于液质联用技术的中药体内代谢产物鉴定方法，系统分析中药成分的代谢途径。',diff:4,tags:['LC-MS/MS','代谢组学','中药','分析化学']},{title:'基于药物基因组学的个体化用药方案优化研究',desc:'分析药物代谢酶基因多态性对药物疗效和不良反应的影响，提出个体化用药建议。',diff:4,tags:['药物基因组学','基因多态性','个体化用药','精准医疗']}]},
+nm:[{title:'基于循证护理的老年跌倒风险评估工具开发与验证',desc:'基于系统综述和Delphi法开发老年人跌倒风险评估工具，并通过临床数据验证其信效度。',diff:3,tags:['循证护理','风险评估','老年护理','Delphi法']},{title:'基于信息-动机-行为模型的患者健康教育依从性研究',desc:'利用IMB模型分析影响患者健康教育依从性的因素，设计并验证针对性护理干预方案的效果。',diff:3,tags:['IMB模型','健康教育','护理干预','依从性']}]}};
+
+function initDeptSelect(){const s=document.getElementById('deptSelect');Object.entries(majorData).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v.name;s.appendChild(o)})}function onDeptChange(){const d=document.getElementById('deptSelect').value,m=document.getElementById('majorSelect'),dir=document.getElementById('directionSelect'),btn=document.getElementById('btnToStep2');m.innerHTML='<option value="">请选择专业</option>';dir.innerHTML='<option value="">请先选择专业</option>';dir.disabled=true;btn.disabled=true;state.dept='';state.major='';state.direction='';if(!d)return;state.dept=d;const majors=majorData[d].majors;Object.entries(majors).forEach(([k,v])=>{const o=document.createElement('option');o.value=k;o.textContent=v.name;m.appendChild(o)});m.disabled=false;saveState();}function onMajorChange(){const m=document.getElementById('majorSelect').value,d=document.getElementById('directionSelect'),btn=document.getElementById('btnToStep2');d.innerHTML='<option value="">请选择研究方向</option>';btn.disabled=true;state.major='';state.direction='';if(!m)return;state.major=m;const directions=majorData[state.dept].majors[m].directions;directions.forEach(dir=>{const o=document.createElement('option');o.value=dir;o.textContent=dir;d.appendChild(o)});d.disabled=false;d.onchange=function(){state.direction=this.value;btn.disabled=!this.value;saveState();}}function getTopics(){if(!state.dept||!state.major)return[];const pool=topicPool[state.dept];if(!pool)return[];const majorTopics=pool[state.major];return majorTopics||[]}function goToStep(n){
+    // 检查是否允许跳转到该步骤
+    if(n>1&&state.currentStep===1&&(!state.dept||!state.major||!state.direction)){showToast('请先完成专业选择','error');return}
+    if(n===3&&!state.selectedTopic&&state.currentStep<3){showToast('请先选择一个选题','error');return}
+    if(n>state.currentStep+1){showToast('请按顺序完成步骤','error');return}
+    
+    if(n===2&&!document.getElementById('topicGrid').children.length){generateTopics()}
+    if(n===3){if(state.selectedTopic){showResearchPlan()}else{showToast('请先选择一个选题','error');return}}
+    state.currentStep=n;
+    document.querySelectorAll('.step-dot').forEach((d,i)=>{d.classList.remove('active','completed');if(i+1<n)d.classList.add('completed');else if(i+1===n)d.classList.add('active')});
+    document.querySelectorAll('.step-content').forEach(c=>c.classList.remove('active'));
+    document.querySelector('.step-content[data-step="'+n+'"]').classList.add('active');
+    setAIStatus('idle','当前步骤：'+n);
+    saveState();
+}
+
+// 生成选题（支持Multi-Agent思考流）
+async function generateTopics(){
+  const g=document.getElementById('topicGrid');
+  g.innerHTML='';
+  const dept=state.dept,major=state.major,direction=state.direction;
+
+  // 显示骨架屏
+  g.innerHTML=createSkeletonCards(4);
+
+  // 更新AI状态
+  setAIStatus('thinking','选题分析师正在分析你的专业方向...');
+  clearThinkStream(2);
+
+  // 展示Multi-Agent思考流（本地模拟，后端API返回时会替换）
+  const localThinking = [
+    createAgentMsg('planner', 'thinking', '收到选题请求，专业方向：' + majorData[dept]?.majors[major]?.name + ' - ' + direction),
+    createAgentMsg('researcher', 'analysis', '正在检索该方向的最新研究热点和论文趋势...'),
+    createAgentMsg('analyst', 'analysis', '分析行业需求，匹配毕业设计可行性...'),
+    createAgentMsg('critic', 'warning', '筛选掉重复度过高的选题，确保创新性...'),
+    createAgentMsg('planner', 'result', '已生成4个高匹配度选题，请查看推荐'),
+  ];
+
+  // 先展示本地思考流动画
+  showAgentThinkingStream(localThinking);
+
+  // 调用后端API生成选题
+  let topics=[];
+  try{
+    if(state.sessionId){
+      const res=await api.generateTopics(state.sessionId,dept,major,direction,4);
+      if(res.success&&res.topics){
+        topics=res.topics.map(t=>({title:t.title,desc:t.description||t.desc,diff:t.difficulty||t.diff||3,tags:t.tags||[],id:t.id}));
+        // 如果后端返回了思考流数据，展示Agent思考流
+        if(res.thinking&&res.thinking.length){
+          await showAgentThinkingStream(res.thinking);
+        }else{
+          await addThinkMsg(2,'✅','已从后端API获取 '+topics.length+' 个推荐选题','success');
+        }
+      }
+    }
+  }catch(e){console.warn('[API] generateTopics failed:',e.message);}
+
+  // 降级：使用本地数据
+  if(!topics.length){
+    topics=getTopics().sort(()=>Math.random()-.5).slice(0,4);
+    await addThinkMsg(2,'ℹ️','后端API不可用，使用本地数据','info');
+  }
+
+  await addThinkMsg(2,'💡','点击选题卡片进行选择','');
+  g.innerHTML=''; // 清除骨架屏
+  topics.forEach((t,i)=>{
+    const c=document.createElement('div');c.className='topic-card';c.style.animationDelay=(i*.1)+'s';
+    const rs=Math.floor(Math.random()*15)+85;
+    c.innerHTML='<div class="ai-recommend-badge">AI推荐度 '+rs+'%</div><div>'+t.tags.map(tag=>'<span class="topic-tag">'+tag+'</span>').join('')+'</div><div class="topic-title">'+t.title+'</div><div class="topic-desc">'+t.desc+'</div><div class="topic-diff">难度：'+Array(5).fill(0).map((_,j)=>'<div class="diff-dot '+(j<t.diff?'filled':'')+'"></div>').join('')+'</div>';
+    c.onclick=()=>selectTopic(t,c);g.appendChild(c);
+  });
+  setAIStatus('done','选题推荐完成');showToast('已为你生成 '+topics.length+' 个推荐选题','success');
+}
+
+function selectTopic(t,el){state.selectedTopic=t;document.querySelectorAll('.topic-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');document.getElementById('btnToStep3').disabled=false;showToast('已选择：'+t.title,'success');saveState();}
+
+async function showResearchPlan(){
+  if(!state.selectedTopic){showToast('请先选择选题','error');return;}
+  const t=state.selectedTopic,mn=majorData[state.dept]?.majors[state.major]?.name||'';
+  document.getElementById('researchTitle').textContent='「'+t.title+'」研究方案';
+  document.getElementById('researchDesc').textContent='以下是针对该选题的完整研究思路，包括研究背景、技术路线和实施计划';
+  setAIStatus('thinking','正在分析选题，生成研究方案...');clearThinkStream(3);
+
+  // 使用Multi-Agent思考流展示研究方案生成过程
+  const planThinking = [
+    createAgentMsg('researcher', 'thinking', '正在分析选题关键词和技术栈...'),
+    createAgentMsg('researcher', 'result', '已识别技术栈：' + t.tags.join('、')),
+    createAgentMsg('planner', 'analysis', '正在规划研究路线图和时间节点...'),
+    createAgentMsg('writer', 'thinking', '正在撰写研究方案文档...'),
+  ];
+  await showAgentThinkingStream(planThinking);
+
+  // 调用后端API生成研究方案
+  let plan=null;
+  try{
+    if(state.sessionId){
+      const res=await api.getResearchPlan(state.sessionId);
+      if(res.success&&res.plan){
+        plan=res.plan;
+        await addThinkMsg(3,'✅','已从后端API获取研究方案','success');
+      }
+    }
+  }catch(e){console.warn('[API] getResearchPlan failed:',e.message);}
+
+  // 降级：使用默认方案
+  if(!plan){
+    plan={
+      background:'针对'+mn+'领域的'+state.direction+'方向进行深入研究',
+      objectives:['完成毕业设计','掌握相关技术'],
+      tech_stack:t.tags,
+      phases:[
+        {title:'文献调研与需求分析（第1-2周）',desc:'查阅国内外相关文献，了解当前研究现状和技术发展趋势。明确研究目标和需求，完成开题报告。'},
+        {title:'技术选型与环境搭建（第3-4周）',desc:'确定技术栈：'+t.tags.join('、')+'等。搭建开发环境，完成核心框架搭建。'},
+        {title:'核心功能开发（第5-10周）',desc:'按照设计方案进行核心模块开发，包括数据采集/处理、模型构建、系统实现等关键环节。'},
+        {title:'系统测试与优化（第11-12周）',desc:'进行功能测试、性能测试和用户体验测试，根据测试结果进行优化迭代。'},
+        {title:'论文撰写与答辩准备（第13-14周）',desc:'整理研究成果，撰写毕业论文。准备答辩PPT和演讲稿，进行模拟答辩练习。'}
+      ],
+      difficulties:[],
+      resources:[]
+    };
+    await addThinkMsg(3,'ℹ️','后端API不可用，使用默认方案','info');
+  }
+
+  document.getElementById('researchOverview').innerHTML='<h4>📋 研究概述</h4><p><strong>选题：</strong>'+t.title+'</p><p><strong>专业方向：</strong>'+mn+' - '+state.direction+'</p><p><strong>技术标签：</strong>'+t.tags.join(' / ')+'</p><p><strong>研究目标：</strong>'+(plan.background||'')+'</p>';
+  const phases=plan.phases||[];
+  document.getElementById('researchTimeline').innerHTML=phases.map((p,i)=>'<div class="timeline-item"><div class="timeline-dot">'+(i+1)+'</div><div class="timeline-content"><div class="timeline-title">'+p.title+'</div><div class="timeline-desc">'+p.desc+'</div></div></div>').join('');
+  setAIStatus('done','研究方案已生成');showToast('研究方案已生成','success');
+}
+
+// ======== 第4步：报告提交 ========
+
+// 上传报告文件（支持压缩包）
+async function handleReportFile(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+
+  const name = f.name.toLowerCase();
+
+  // 压缩包处理
+  if (name.endsWith('.zip')) {
+    await processZipFile(f);
+    return;
+  }
+
+  // 普通文本文件
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    document.getElementById('reportText').value = ev.target.result;
+    showToast('文件已加载：' + f.name, 'success');
+  };
+  reader.readAsText(f);
+}
+
+// 处理ZIP压缩包
+async function processZipFile(file) {
+  showToast('正在解压压缩包...', 'info');
+  setAIStatus('analyzing', '正在解析压缩包内容...');
+
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const files = [];
+
+    zip.forEach((relativePath, zipEntry) => {
+      if (!zipEntry.dir) {
+        files.push({
+          path: relativePath,
+          name: zipEntry.name,
+          ext: (zipEntry.name.split('.').pop() || '').toLowerCase()
+        });
+      }
+    });
+
+    // 分类文件
+    const categories = {
+      report: files.filter(f => ['txt','md','doc','docx','pdf'].includes(f.ext)),
+      code: files.filter(f => ['js','ts','py','java','cpp','c','h','html','css','vue','jsx','go','rs'].includes(f.ext)),
+      ppt: files.filter(f => ['ppt','pptx','key'].includes(f.ext)),
+      data: files.filter(f => ['csv','xls','xlsx','json'].includes(f.ext)),
+      image: files.filter(f => ['png','jpg','jpeg','gif','svg','webp'].includes(f.ext)),
+      other: []
+    };
+    categories.other = files.filter(f =>
+      !categories.report.includes(f) &&
+      !categories.code.includes(f) &&
+      !categories.ppt.includes(f) &&
+      !categories.data.includes(f) &&
+      !categories.image.includes(f)
+    );
+
+    // 读取报告类文件内容
+    let reportContent = '';
+    const reportFiles = [...categories.report, ...categories.code];
+
+    for (const item of reportFiles.slice(0, 20)) {
+      try {
+        const content = await zip.file(item.path).async('string');
+        reportContent += '\n\n===== ' + item.name + ' =====\n' + content.substring(0, 5000);
+      } catch (err) {
+        console.warn('读取文件失败:', item.name);
+      }
+    }
+
+    // 构建摘要信息
+    let summary = '📦 压缩包解析完成：' + file.name + '\n\n';
+    summary += '📄 报告/文档：' + categories.report.length + ' 个\n';
+    summary += '💻 代码文件：' + categories.code.length + ' 个\n';
+    summary += '📊 PPT/演示：' + categories.ppt.length + ' 个\n';
+    summary += '📈 数据文件：' + categories.data.length + ' 个\n';
+    summary += '🖼️ 图片资源：' + categories.image.length + ' 个\n';
+    summary += '📁 其他文件：' + categories.other.length + ' 个\n';
+    summary += '\n文件列表：\n' + files.slice(0, 30).map(f => '  • ' + f.path).join('\n');
+    if (files.length > 30) summary += '\n  ... 等共 ' + files.length + ' 个文件';
+
+    // 显示到文本框
+    document.getElementById('reportText').value = summary + '\n\n' + reportContent;
+
+    showToast('压缩包解析完成！共 ' + files.length + ' 个文件', 'success');
+    setAIStatus('idle', '压缩包已解析，可进行AI评审');
+
+  } catch (err) {
+    console.error('解压失败:', err);
+    showToast('压缩包解析失败：' + err.message, 'error');
+    setAIStatus('idle', '压缩包解析失败');
+  }
+}
+
+// 提交论文评审 - 主函数
+async function submitReport() {
+  const text = document.getElementById('reportText').value.trim();
+  if (!text || text.length < 50) {
+    showToast('请粘贴论文内容（至少50字）', 'error');
+    return;
+  }
+  
+  // 隐藏提交区，显示结果区
+  document.getElementById('reportSubmitArea').style.display = 'none';
+  document.getElementById('reportResultArea').style.display = 'block';
+  document.getElementById('reportTip').innerHTML = '<strong>AI提示：</strong>AI正在评审你的论文，请稍候...';
+  
+  setAIStatus('thinking', 'AI评审官正在审阅你的论文...');
+  clearThinkStream(4);
+  
+  // 展示Multi-Agent思考流
+  const reportThinking = [
+    createAgentMsg('researcher', 'thinking', '正在接收论文内容，识别论文结构...'),
+    createAgentMsg('researcher', 'analysis', '分析摘要：提取研究背景、目标与方法...'),
+    createAgentMsg('analyst', 'analysis', '评估数据分析部分的方法选择和结果呈现...'),
+    createAgentMsg('critic', 'thinking', '从学术规范角度评审论文的创新性和完整性...'),
+    createAgentMsg('qa', 'thinking', '基于论文内容生成答辩预测问题...'),
+    createAgentMsg('qa', 'result', '评审完成！正在生成综合报告...'),
+  ];
+  await showAgentThinkingStream(reportThinking);
+  
+  // 尝试调用后端API进行评审
+  let scores = null;
+  let backendReview = null;
+  try {
+    if (state.sessionId) {
+      await addThinkMsg(4, '📤', '正在调用后端AI进行深度评审...', 'processing');
+      const res = await api.reportReview(state.sessionId, state.selectedTopic?.title || '未命名选题', text);
+      if (res.success && res.review) {
+        backendReview = res.review;
+        scores = backendReview.scores;
+        await addThinkMsg(4, '✅', '后端AI评审完成', 'success');
+      }
+    }
+  } catch (e) {
+    console.warn('[API] reportReview failed:', e.message);
+    await addThinkMsg(4, 'ℹ️', '后端API不可用，使用本地规则评审', 'info');
+  }
+
+  // 降级：本地规则评审
+  if (!scores) {
+    const reportLength = text.length;
+    const hasAbstract = /摘要|abstract|概述|引言/i.test(text.slice(0, 500));
+    const hasMethod = /方法|算法|技术|模型|架构/i.test(text);
+    const hasData = /数据|实验|测试|分析|结果/i.test(text);
+    const hasConclusion = /结论|总结|讨论|展望/i.test(text);
+    const hasRef = /参考|文献|\[|\d{4}\./i.test(text);
+    
+    scores = {
+      structure: hasAbstract && hasConclusion ? 8.5 : hasAbstract || hasConclusion ? 6.5 : 4.5,
+      method: hasMethod ? 8.0 : 5.0,
+      innovation: hasMethod && hasData ? 8.0 : 6.0,
+      data: hasData ? 7.5 : 4.5,
+      reference: hasRef ? 8.0 : 5.0
+    };
+  }
+  
+  const totalScore = Object.values(scores).reduce((a,b) => a+b, 0) / 5;
+  
+  // 渲染评分网格
+  const scoreGrid = document.getElementById('reportScoreGrid');
+  scoreGrid.innerHTML = `
+    <div class="stat-card card"><div class="stat-value" style="color:${totalScore>=8?'var(--accent)':totalScore>=6?'var(--warn)':'var(--bad)'}">${totalScore.toFixed(1)}</div><div class="stat-label">综合评分</div></div>
+    <div class="stat-card card"><div class="stat-value" style="color:${scores.structure>=7?'var(--accent)':'var(--warn)'}">${scores.structure.toFixed(1)}</div><div class="stat-label">结构完整性</div></div>
+    <div class="stat-card card"><div class="stat-value" style="color:${scores.method>=7?'var(--accent)':'var(--warn)'}">${scores.method.toFixed(1)}</div><div class="stat-label">研究方法</div></div>
+    <div class="stat-card card"><div class="stat-value" style="color:${scores.innovation>=7?'var(--accent)':'var(--warn)'}">${scores.innovation.toFixed(1)}</div><div class="stat-label">创新性</div></div>
+    <div class="stat-card card"><div class="stat-value" style="color:${scores.data>=7?'var(--accent)':'var(--warn)'}">${scores.data.toFixed(1)}</div><div class="stat-label">数据分析</div></div>
+    <div class="stat-card card"><div class="stat-value" style="color:${scores.reference>=7?'var(--accent)':'var(--warn)'}">${scores.reference.toFixed(1)}</div><div class="stat-label">参考文献</div></div>
+  `;
+  
+  // 渲染维度评分详情
+  const flags = {
+    hasAbstract: scores.structure >= 6,
+    hasMethod: scores.method >= 6,
+    hasData: scores.data >= 6,
+    hasConclusion: scores.structure >= 6,
+    hasRef: scores.reference >= 6
+  };
+  renderDimensionScores(scores, flags, text.length);
+  
+  // 生成答辩预测问题
+  generatePredictedQuestions(state.selectedTopic?.title || '未命名选题', text);
+  
+  // 生成改进建议
+  renderImprovementTips(scores, flags);
+  
+  setAIStatus('done', '论文评审完成');
+  showToast('论文评审完成！综合评分 ' + totalScore.toFixed(1) + '/10', 'success');
+}
+
+// 渲染各维度详细评分和分析
+function renderDimensionScores(scores, flags, length) {
+  const container = document.getElementById('dimensionScores');
+  const dimensions = [
+    {key:'structure', name:'结构完整性', desc:'检查论文是否包含摘要、引言、方法、实验、结论等核心章节', ok:flags.hasAbstract && flags.hasConclusion, tips:flags.hasAbstract?'摘要清晰，研究背景明确':'建议补充摘要部分', ok2:false},
+    {key:'method', name:'研究方法', desc:'评估技术路线、算法选择、实验设计的合理性与创新性', ok:flags.hasMethod, tips:flags.hasMethod?'研究方法描述清晰，技术路线合理':'建议详细描述研究方法和技术方案', ok2:false},
+    {key:'innovation', name:'创新性', desc:'分析研究是否提出新方法、新视角或新应用场景', ok:flags.hasMethod && flags.hasData, tips:flags.hasMethod?'具有一定的技术深度，建议突出创新点':'建议在论文中明确阐述创新之处', ok2:false},
+    {key:'data', name:'数据分析', desc:'检查数据处理、统计分析、实验结果的可视化呈现', ok:flags.hasData, tips:flags.hasData?'数据分析部分较为完整，图表丰富':'建议补充数据分析和实验结果', ok2:false},
+    {key:'reference', name:'参考文献', desc:'评估引用的规范性和时效性，是否涵盖重要相关研究', ok:flags.hasRef, tips:flags.hasRef?'引用格式规范，文献较全面':'建议补充参考文献，注意引用近5年论文', ok2:false},
+  ];
+  
+  let html = '';
+  dimensions.forEach(dim => {
+    const score = scores[dim.key];
+    const barWidth = Math.max(10, score * 10);
+    html += `
+    <div style="margin-bottom:16px;padding:14px;background:var(--bg);border-radius:8px;border-left:3px solid ${score>=7?'var(--accent)':score>=5?'var(--warn)':'var(--bad)'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <strong style="font-size:14px">${dim.name}</strong>
+        <span style="font-size:14px;font-weight:700;color:${score>=7?'var(--accent)':score>=5?'var(--warn)':'var(--bad)'}">${score.toFixed(1)}/10</span>
+      </div>
+      <div style="height:6px;background:var(--bg3);border-radius:3px;margin-bottom:8px;overflow:hidden">
+        <div style="height:100%;width:${barWidth}%;border-radius:3px;background:linear-gradient(90deg,${score>=7?'var(--accent)':score>=5?'var(--warn)':'var(--bad)'},${score>=7?'var(--accent-light)':score>=5?'#fbbf24':'#f87171'});transition:width 1s ease"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:4px">${dim.desc}</div>
+      <div style="font-size:13px;color:${dim.ok?'var(--accent)':'var(--warn)'}">${dim.ok?'✅ ':'💡 '}${dim.tips}</div>
+    </div>`;
+  });
+  
+  // 总体评价
+  const avg = Object.values(scores).reduce((a,b)=>a+b,0)/Object.keys(scores).length;
+  let summary = '';
+  if (avg >= 8) summary = '论文整体质量优秀，结构完整，研究方法扎实。建议在答辩前重点关注创新点的阐述和实验结果的深入分析。';
+  else if (avg >= 6) summary = '论文框架基本完整，但部分维度还有提升空间。建议根据AI评分中的提示补充缺失章节，强化技术方案和创新点的描述。';
+  else summary = '论文需要较大改进。建议优先补充摘要和结论部分，完善研究方法描述，增加数据分析内容，补充参考文献。';
+  
+  html += `
+  <div style="padding:12px 16px;background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(16,185,129,.1));border-radius:8px;font-size:13px;line-height:1.6;color:var(--text2)">
+    <strong>📋 总体评价：</strong>${summary}
+  </div>`;
+  
+  container.innerHTML = html;
+}
+
+// 生成答辩问题预测
+function generatePredictedQuestions(topic, paperText) {
+  const container = document.getElementById('predictedQuestions');
+  
+  // 基于论文内容生成个性化问题
+  const hasData = /\d+[%万]|实验|数据|测试|准确[率度]|精度|F1|AUC/i.test(paperText);
+  const hasMethod = /算法|模型|网络|框架|方法/i.test(paperText);
+  const hasCompare = /对比|比较|baseline|基线|优于|高于/i.test(paperText);
+  const hasTheory = /理论|原理|数学|公式|推导/i.test(paperText);
+  
+  const questions = [
+    {
+      q: '请详细阐述你的选题「' + topic + '」的研究背景和意义，为什么选择这个方向？',
+      reason: '考察研究动机和选题价值',
+      key: ['背景', '意义', '动机']
+    },
+    {
+      q: hasMethod ? '你采用了什么技术方案？为什么选择这个方案而不是其他方案？' : '请介绍你计划采用的研究方法和技术路线。',
+      reason: '考察技术方案选择的合理性',
+      key: ['技术方案', '选型', '对比']
+    },
+    {
+      q: hasCompare ? '你的方法与现有方法相比有什么优势？实验数据如何支撑你的结论？' : '你的研究在哪些方面有创新？与现有工作相比有什么不同？',
+      reason: '考察创新点和对比分析能力',
+      key: ['创新', '对比', '优势']
+    },
+    {
+      q: hasData ? '你的数据是如何收集和处理的？数据规模和质量如何保证？' : '请说明你的数据来源、数据处理方法和数据规模。',
+      reason: '考察数据意识和数据处理能力',
+      key: ['数据', '来源', '质量']
+    },
+    {
+      q: hasTheory ? '请解释你使用的核心算法/模型的数学原理，以及为什么适用于你的问题？' : '研究过程中遇到的最大技术难点是什么？你是如何解决的？',
+      reason: '考察理论功底和问题解决能力',
+      key: ['原理', '难点', '解决']
+    },
+    {
+      q: '你的研究成果有什么实际应用价值？未来的研究方向和改进方向是什么？',
+      reason: '考察应用视野和未来规划',
+      key: ['应用', '展望', '价值']
+    }
+  ];
+  
+  let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  questions.forEach((item, i) => {
+    html += `
+    <div style="padding:12px 16px;background:var(--bg);border-radius:8px;border-left:3px solid var(--primary)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+        <strong style="font-size:14px">问题 ' + (i+1) + '</strong>
+        <span style="font-size:11px;color:var(--text3);padding:2px 8px;background:rgba(99,102,241,.15);border-radius:10px">' + item.reason + '</span>
+      </div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6">' + item.q + '</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">关键词：' + item.key.join('、') + '</div>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+  
+  // 保存到state，答辩阶段可复用
+  state.predictedQuestions = questions;
+}
+
+// 渲染改进建议
+function renderImprovementTips(scores, flags) {
+  const container = document.getElementById('improvementTips');
+  const tips = [];
+  
+  if (!flags.hasAbstract) tips.push({severity:'high', title:'缺少摘要', desc:'建议补充200-300字的摘要，概述研究背景、方法、结果和结论'});
+  if (!flags.hasMethod) tips.push({severity:'high', title:'研究方法不清晰', desc:'建议专门用一节详细描述技术方案、算法选择和实验设计'});
+  if (!flags.hasData) tips.push({severity:'high', title:'数据分析不足', desc:'建议补充实验数据、结果分析和可视化图表'});
+  if (!flags.hasConclusion) tips.push({severity:'medium', title:'缺少结论', desc:'建议补充结论部分，总结研究发现并展望未来方向'});
+  if (!flags.hasRef) tips.push({severity:'medium', title:'参考文献缺失', desc:'建议引用10-15篇相关论文，注意引用时效性'});
+  if (scores.innovation < 7) tips.push({severity:'medium', title:'创新点不突出', desc:'建议在引言中明确列出2-3个创新点，并与现有工作对比'});
+  
+  if (tips.length === 0) {
+    tips.push({severity:'low', title:'整体质量良好', desc:'论文各维度表现均衡，建议针对评审分数较低的维度做针对性优化'});
+    tips.push({severity:'low', title:'答辩准备', desc:'建议对AI预测的6个答辩问题进行模拟回答，确保回答内容与论文一致'});
+  }
+  
+  let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  tips.forEach(tip => {
+    const color = tip.severity === 'high' ? 'var(--bad)' : tip.severity === 'medium' ? 'var(--warn)' : 'var(--accent)';
+    const icon = tip.severity === 'high' ? '🔴' : tip.severity === 'medium' ? '🟡' : '🟢';
+    html += `
+    <div style="padding:12px 16px;background:var(--bg);border-radius:8px;border-left:3px solid ${color}">
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px">${icon} ${tip.title}</div>
+      <div style="font-size:13px;color:var(--text2)">${tip.desc}</div>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// 导出评审报告
+function exportReviewReport() {
+  const scores = document.getElementById('reportScoreGrid').querySelectorAll('.stat-value');
+  const totalScore = scores[0]?.textContent || 'N/A';
+  const topic = state.selectedTopic?.title || '未命名选题';
+  
+  const html = '<!DOCTYPE html>\n<html lang="zh-CN">\n<head><meta charset="UTF-8"><title>AI论文评审报告</title>\n<style>\nbody{font-family:\'SimSun\',serif;max-width:800px;margin:0 auto;padding:40px;line-height:1.8}\nh1{text-align:center;font-size:20px;border-bottom:2px solid #333;padding-bottom:10px}\nh2{font-size:16px;margin:24px 0 12px;border-left:4px solid #6366f1;padding-left:12px}\n.score{font-size:36px;text-align:center;color:#6366f1;margin:20px 0}\n.footer{text-align:center;font-size:12px;color:#999;margin-top:40px;border-top:1px solid #eee;padding-top:16px}\n</style></head>\n<body>\n<h1>AI论文评审报告</h1>\n<div class="score">综合评分：' + totalScore + '/10</div>\n<p><strong>论文题目：</strong>' + topic + '</p>\n<p><strong>评审时间：</strong>' + new Date().toLocaleString('zh-CN') + '</p>\n<p><strong>评审说明：</strong>本报告由AI毕业设计全流程助手自动生成，仅供参考。</p>\n<h2>各维度评分</h2>\n' + document.getElementById('dimensionScores').innerHTML + '\n<h2>答辩问题预测</h2>\n' + document.getElementById('predictedQuestions').innerHTML + '\n<h2>改进建议</h2>\n' + document.getElementById('improvementTips').innerHTML + '\n<div class="footer">\n<p>本报告由 AI毕业设计全流程助手 自动生成</p>\n</div>\n</body></html>';
+  
+  const blob = new Blob([html], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'AI评审报告_' + topic.slice(0,20) + '.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('评审报告已下载', 'success');
+}
+
+// 重置报告提交
+function resetReport() {
+  document.getElementById('reportSubmitArea').style.display = 'block';
+  document.getElementById('reportResultArea').style.display = 'none';
+  document.getElementById('reportText').value = '';
+  document.getElementById('reportTip').innerHTML = '<strong>AI提示：</strong>在答辩前，把你的论文内容提交给AI进行预审。AI将从结构完整性、研究方法、创新性、数据分析、参考文献等维度给出评分和改进建议，并生成精准的答辩问题。';
+  setAIStatus('idle', '等待提交论文...');
+}
+
+function handleFileSelect(e){const f=e.target.files[0];if(!f)return;if(!f.name.endsWith('.csv')){showToast('请上传CSV格式文件','error');return}processCSV(f)}async function processCSV(file){
+  setAIStatus('analyzing','数据已接收，正在解析...');
+  clearThinkStream(4);
+
+  // 使用Multi-Agent思考流展示数据分析过程
+  const dataThinking = [
+    createAgentMsg('data', 'thinking', '数据已接收，正在解析文件「' + file.name + '」...'),
+    createAgentMsg('data', 'result', '文件解析完成，准备上传分析...'),
+    createAgentMsg('analyst', 'analysis', '正在识别字段类型和数据特征...'),
+  ];
+  await showAgentThinkingStream(dataThinking);
+
+  // 先本地解析预览
+  Papa.parse(file,{header:true,dynamicTyping:true,skipEmptyLines:true,complete:function(r){
+    state.csvData=r.data;state.csvHeaders=r.meta.fields;
+  },error:function(){showToast('文件解析失败，请检查CSV格式','error');setAIStatus('idle','等待上传数据...');return;}});
+  await sleep(300); // 等待Papa.parse完成
+
+  // 调用后端API分析
+  try{
+    if(state.sessionId){
+      await addThinkMsg(4,'📤','正在上传数据到后端分析...','processing');
+      const res=await api.uploadCSV(state.sessionId,file);
+      if(res.success){
+        await addThinkMsg(4,'✅','后端分析完成','success');
+        // 使用后端返回的分析结果
+        renderAnalysisResult(res);
+        showToast('后端数据分析完成！','success');
+        return;
+      }
+    }
+  }catch(e){console.warn('[API] uploadCSV failed:',e.message);await addThinkMsg(4,'⚠️','后端分析失败，使用本地分析','processing');}
+
+  // 降级：本地分析
+  analyzeData();
+  showToast('数据文件解析成功！','success');
+}
+
+// 渲染后端分析结果
+function renderAnalysisResult(res){
+  const data=state.csvData,headers=state.csvHeaders;
+  document.getElementById('uploadArea').style.display='none';
+  document.getElementById('dataPreview').style.display='block';
+  const summary=res.summary||{};
+  const charts=res.charts||[];
+  const insights=res.insights||[];
+
+  // 数据概览
+  document.getElementById('dataStats').innerHTML='<div class="stat-card card"><div class="stat-value">'+(res.row_count||data.length)+'</div><div class="stat-label">数据行数</div></div><div class="stat-card card"><div class="stat-value">'+(res.column_count||headers.length)+'</div><div class="stat-label">字段数量</div></div>';
+
+  // 数据预览表
+  const table=document.getElementById('dataTable');
+  table.innerHTML='<thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead>';
+  data.slice(0,10).forEach(row=>{table.innerHTML+='<tr>'+headers.map(h=>'<td>'+(row[h]!=null?row[h]:'-')+'</td>').join('')+'</tr>'});
+
+  // 字段摘要（来自后端）
+  const fs=document.getElementById('fieldSummary');
+  let sh='<h4>📊 各字段统计摘要（后端分析）</h4>';
+  if(summary.columns){
+    summary.columns.forEach(col=>{
+      if(col.mean!==undefined){
+        sh+='<p style="margin-top:6px"><strong>'+col.name+'</strong>：均值='+(col.mean||'-')+'，标准差='+(col.std||'-')+'，范围=['+(col.min||'-')+', '+(col.max||'-')+']</p>';
+      }else{
+        sh+='<p style="margin-top:6px"><strong>'+col.name+'</strong>：'+col.unique_count+' 个类别</p>';
+      }
+    });
+  }
+  fs.innerHTML=sh;
+
+  // 质量报告
+  const qr=document.getElementById('qualityReport');
+  let qh='<h4>🔍 数据质量报告（后端分析）</h4>';
+  insights.forEach(ins=>{
+    const cls=ins.type==='warning'?'warn':ins.type==='success'?'good':'info';
+    qh+='<div class="quality-item"><div class="quality-dot '+cls+'"></div><strong>'+ins.title+'</strong>：'+ins.content+'</div>';
+  });
+  qr.innerHTML=qh;
+
+  // 图表（使用后端返回的图表数据）
+  renderBackendCharts(charts);
+
+  // 相关性
+  const cr=document.getElementById('correlationMatrix');
+  if(summary.correlation&&Object.keys(summary.correlation).length>0){
+    let ch='<h4>🔗 字段相关性分析</h4>';
+    Object.entries(summary.correlation).forEach(([k,v])=>{
+      ch+='<p><strong>'+k+'</strong>：相关系数 '+v+'</p>';
+    });
+    cr.innerHTML=ch;
+  }else{cr.innerHTML='<p style="color:var(--text3)">数值型字段不足，无法计算相关性</p>';}
+
+  // 建模建议
+  const ad=document.getElementById('modelingAdvice');
+  ad.innerHTML='<h4>💡 AI建模建议（后端分析）</h4>'+insights.map(i=>'<p>• <strong>'+i.title+'</strong>：'+i.content+'</p>').join('');
+
+  // 论文描述
+  generatePaperReport(data,headers,headers.filter(h=>data.some(r=>typeof r[h]==='number')),headers.filter(h=>data.some(r=>typeof r[h]==='string')));
+
+  setAIStatus('done','后端数据分析完成');
+}
+
+function renderBackendCharts(charts){
+  const container=document.getElementById('chartsContainer');
+  container.innerHTML='';
+  const C=getChartColors();
+  charts.forEach((chart,i)=>{
+    const div=document.createElement('div');div.className='chart-container';div.id='backendChart'+i;
+    div.style.cssText='height:300px;margin-bottom:20px';
+    container.appendChild(div);
+    const ec=echarts.init(div);
+    let option;
+    if(chart.type==='histogram'){
+      option={title:{text:chart.title,left:'center',textStyle:{color:C.text,fontSize:14}},tooltip:{},xAxis:{type:'category',data:chart.xAxis,axisLabel:{color:C.sub}},yAxis:{type:'value',axisLabel:{color:C.sub}},series:chart.series.map(s=>({type:'bar',name:s.name,data:s.data,itemStyle:{color:C.primary}})),backgroundColor:'transparent'};
+    }else if(chart.type==='pie'){
+      option={title:{text:chart.title,left:'center',textStyle:{color:C.text,fontSize:14}},tooltip:{trigger:'item'},series:[{type:'pie',radius:'50%',data:chart.data,label:{color:C.text},itemStyle:{borderColor:C.border,borderWidth:2}}],backgroundColor:'transparent'};
+    }else if(chart.type==='scatter'){
+      option={title:{text:chart.title,left:'center',textStyle:{color:C.text,fontSize:14}},tooltip:{},xAxis:{type:'value',name:chart.xAxis,axisLabel:{color:C.sub}},yAxis:{type:'value',name:chart.yAxis,axisLabel:{color:C.sub}},series:[{type:'scatter',data:chart.data,symbolSize:8,itemStyle:{color:C.accent}}],backgroundColor:'transparent'};
+    }
+    if(option)ec.setOption(option);
+  });
+}
+
+async function analyzeData(){const data=state.csvData,headers=state.csvHeaders;document.getElementById('uploadArea').style.display='none';document.getElementById('dataPreview').style.display='block';const nc=headers.filter(h=>data.some(r=>typeof r[h]==='number')),cc=headers.filter(h=>data.some(r=>typeof r[h]==='string'));setAIStatus('analyzing','正在分析数据特征...');await runThinkSequence(4,[{icon:'✅',text:'文件解析完成，共 '+data.length+' 行数据','type':'success'},{icon:'🔍',text:'正在识别字段类型...','type':'processing'},{icon:'✅',text:'识别到 '+nc.length+' 个数值型字段，'+cc.length+' 个分类型字段','type':'success'},{icon:'🔍',text:'正在生成统计分析...','type':'processing',delay:300},{icon:'✅',text:'数据质量检测完成','type':'success'},{icon:'🔍',text:'正在生成可视化图表...','type':'processing',delay:300},{icon:'✅',text:'所有分析已完成，请查看各标签页','type':'success'}]);document.getElementById('dataStats').innerHTML='<div class="stat-card card"><div class="stat-value">'+data.length+'</div><div class="stat-label">数据行数</div></div><div class="stat-card card"><div class="stat-value">'+headers.length+'</div><div class="stat-label">字段数量</div></div><div class="stat-card card"><div class="stat-value">'+nc.length+'</div><div class="stat-label">数值型字段</div></div><div class="stat-card card"><div class="stat-value">'+cc.length+'</div><div class="stat-label">分类型字段</div></div>';const table=document.getElementById('dataTable');table.innerHTML='<thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead>';data.slice(0,10).forEach(row=>{table.innerHTML+='<tr>'+headers.map(h=>'<td>'+(row[h]!=null?row[h]:'-')+'</td>').join('')+'</tr>'});const fs=document.getElementById('fieldSummary');let sh='<h4>📊 各字段统计摘要</h4>';nc.forEach(col=>{const vals=data.map(r=>r[col]).filter(v=>v!=null&&!isNaN(v));if(!vals.length)return;const mean=(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2),sorted=[...vals].sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)],std=Math.sqrt(vals.reduce((s,v)=>s+(v-mean)**2,0)/vals.length).toFixed(2);sh+='<p style="margin-top:6px"><strong>'+col+'</strong>：均值='+mean+'，中位数='+median+'，标准差='+std+'，范围=['+sorted[0]+', '+sorted[sorted.length-1]+']</p>'});cc.forEach(col=>{const counts={};data.forEach(r=>{if(r[col]!=null)counts[r[col]]=(counts[r[col]]||0)+1});const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);sh+='<p style="margin-top:6px"><strong>'+col+'</strong>：'+entries.length+' 个类别，最多的为「'+entries[0][0]+'」('+entries[0][1]+'次)</p>'});fs.innerHTML=sh;generateQualityReport(data,headers,nc,cc);generateCharts(data,headers,nc,cc);generateCorrelation(data,headers,nc);generateAdvice(data,headers,nc,cc);generatePaperReport(data,headers,nc,cc);setAIStatus('done','数据分析完成')}
+function generateQualityReport(data,headers,nc,cc){const qr=document.getElementById('qualityReport');let html='<h4>🔍 数据质量报告</h4>';const nullCounts={};headers.forEach(h=>{nullCounts[h]=data.filter(r=>r[h]==null||r[h]==='').length});const nullCols=Object.entries(nullCounts).filter(([,c])=>c>0);if(nullCols.length){html+='<div class="quality-item"><div class="quality-dot warn"></div><strong>缺失值检测</strong>：'+nullCols.length+' 个字段存在缺失值，共 '+nullCols.reduce((s,[,c])=>s+c,0)+' 条</div>'}else{html+='<div class="quality-item"><div class="quality-dot good"></div><strong>缺失值检测</strong>：数据完整，无缺失值</div>'}const dupCount=data.length-new Set(data.map(r=>JSON.stringify(r))).size;if(dupCount>0){html+='<div class="quality-item"><div class="quality-dot warn"></div><strong>重复值检测</strong>：发现 '+dupCount+' 条重复记录</div>'}else{html+='<div class="quality-item"><div class="quality-dot good"></div><strong>重复值检测</strong>：无重复记录</div>'}if(nc.length>0){const outlierCols=[];nc.forEach(col=>{const vals=data.map(r=>r[col]).filter(v=>v!=null&&!isNaN(v));if(vals.length<4)return;const mean=vals.reduce((a,b)=>a+b,0)/vals.length,std=Math.sqrt(vals.reduce((s,v)=>s+(v-mean)**2,0)/vals.length);const outliers=vals.filter(v=>Math.abs(v-mean)>3*std);if(outliers.length>0)outlierCols.push(col)});if(outlierCols.length){html+='<div class="quality-item"><div class="quality-dot info"></div><strong>异常值检测</strong>：'+outlierCols.join('、')+' 等字段可能存在异常值</div>'}}html+='<div class="quality-item"><div class="quality-dot good"></div><strong>数据规模</strong>：'+data.length+' 行 × '+headers.length+' 列，适合进行统计分析</div>';qr.innerHTML=html}
+function generateCharts(data,headers,nc,cc){const container=document.getElementById('chartsContainer');container.innerHTML='';const C=getChartColors();nc.slice(0,3).forEach((col,i)=>{const vals=data.map(r=>r[col]).filter(v=>v!=null&&!isNaN(v));if(vals.length<5)return;const div=document.createElement('div');div.className='chart-container';div.id='chart'+i;container.appendChild(div);const ec=echarts.init(div);ec.setOption({title:{text:col+' 分布',left:'center',textStyle:{color:C.text,fontSize:14}},tooltip:{},xAxis:{type:'category',data:[...new Set(vals)].sort((a,b)=>a-b).slice(0,20),axisLabel:{color:C.sub}},yAxis:{type:'value',axisLabel:{color:C.sub}},series:[{type:'bar',data:[...new Set(vals)].sort((a,b)=>a-b).slice(0,20).map(v=>vals.filter(x=>x===v).length),itemStyle:{color:C.primary}}],backgroundColor:'transparent'})});cc.slice(0,2).forEach((col,i)=>{const counts={};data.forEach(r=>{if(r[col]!=null)counts[r[col]]=(counts[r[col]]||0)+1});const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);if(entries.length<2)return;const div=document.createElement('div');div.className='chart-container';div.id='pie'+i;container.appendChild(div);const ec=echarts.init(div);ec.setOption({title:{text:col+' 分布',left:'center',textStyle:{color:C.text,fontSize:14}},tooltip:{trigger:'item'},series:[{type:'pie',radius:'50%',data:entries.map(([k,v])=>({name:k,value:v})),label:{color:C.text},itemStyle:{borderColor:C.border,borderWidth:2}}],backgroundColor:'transparent'})});if(nc.length>=2){const div=document.createElement('div');div.className='chart-container';div.id='scatter0';container.appendChild(div);const ec=echarts.init(div);const c1=nc[0],c2=nc[1];const pts=data.map(r=>[r[c1],r[c2]]).filter(p=>p[0]!=null&&p[1]!=null&&!isNaN(p[0])&&!isNaN(p[1]));ec.setOption({title:{text:c1+' vs '+c2,left:'center',textStyle:{color:C.text,fontSize:14}},tooltip:{},xAxis:{type:'value',name:c1,axisLabel:{color:C.sub}},yAxis:{type:'value',name:c2,axisLabel:{color:C.sub}},series:[{type:'scatter',data:pts,symbolSize:6,itemStyle:{color:C.accent}}],backgroundColor:'transparent'})}}
+function generateCorrelation(data,headers,nc){const cr=document.getElementById('correlationMatrix');if(nc.length<2){cr.innerHTML='<p style="color:var(--text3)">数值型字段不足，无法计算相关性</p>';return}let html='<h4>🔗 字段相关性分析</h4>';for(let i=0;i<nc.length;i++){for(let j=i+1;j<nc.length;j++){const c1=nc[i],c2=nc[j];const vals=data.map(r=>[r[c1],r[c2]]).filter(p=>p[0]!=null&&p[1]!=null&&!isNaN(p[0])&&!isNaN(p[1]));if(vals.length<3)continue;const n=vals.length,m1=vals.reduce((s,p)=>s+p[0],0)/n,m2=vals.reduce((s,p)=>s+p[1],0)/n;const num=vals.reduce((s,p)=>s+(p[0]-m1)*(p[1]-m2),0);const den=Math.sqrt(vals.reduce((s,p)=>s+(p[0]-m1)**2,0)*vals.reduce((s,p)=>s+(p[1]-m2)**2,0));const r=den===0?0:num/den;html+='<p><strong>'+c1+' vs '+c2+'</strong>：相关系数 '+r.toFixed(3)+' '+(Math.abs(r)>0.7?'(强相关)':Math.abs(r)>0.3?'(中等相关)':'(弱相关)')+'</p>'}}cr.innerHTML=html||'<p style="color:var(--text3)">未找到显著相关性</p>'}
+function generateAdvice(data,headers,nc,cc){const ad=document.getElementById('modelingAdvice');let html='<h4>💡 AI建模建议</h4>';if(nc.length>=2&&cc.length>=1){html+='<p>• <strong>监督学习</strong>：可使用「'+nc[nc.length-1]+'」作为目标变量，构建回归预测模型</p>'}if(cc.length>=2){html+='<p>• <strong>分类任务</strong>：可使用「'+cc[0]+'」作为标签，训练分类模型</p>'}if(nc.length>=3){html+='<p>• <strong>聚类分析</strong>：基于 '+nc.slice(0,3).join('、')+' 进行K-Means聚类，发现数据内在分组</p>'}if(data.length>100){html+='<p>• <strong>数据规模</strong>：'+data.length+' 条记录适合训练机器学习模型，建议按 8:2 划分训练集和测试集</p>'}else{html+='<p>• <strong>数据规模</strong>：数据量较小('+data.length+'条)，建议使用交叉验证评估模型性能</p>'}html+='<p>• <strong>特征工程</strong>：建议对数值型特征进行标准化处理，对分类型特征进行One-Hot编码</p>';html+='<p>• <strong>模型选择</strong>：可尝试随机森林、XGBoost、LightGBM等集成学习方法</p>';ad.innerHTML=html}
+function generatePaperReport(data,headers,nc,cc){const pd=document.getElementById('paperDescription');const t=state.selectedTopic||{title:'未选择选题',desc:'',tags:['数据分析']};let html='<h4>📝 论文数据描述</h4><div style="background:var(--bg2);padding:16px;border-radius:8px;border:1px solid var(--border);line-height:1.8;font-size:14px">';html+='<p><strong>数据集概述：</strong>本研究使用的数据集包含 <strong>'+data.length+'</strong> 条记录，<strong>'+headers.length+'</strong> 个字段。数据涵盖 '+nc.length+' 个数值型变量和 '+cc.length+' 个分类型变量。</p>';if(nc.length>0){html+='<p><strong>数值型变量：</strong>'+nc.join('、')+'。这些变量将用于构建预测模型和进行统计推断。</p>'}if(cc.length>0){html+='<p><strong>分类型变量：</strong>'+cc.slice(0,5).join('、')+(cc.length>5?' 等':'')+'。这些变量可用于分组分析和特征编码。</p>'}html+='<p><strong>数据质量：</strong>经过初步检查，数据整体质量良好'+(data.length>100?'，样本量充足，适合进行机器学习建模。':',但样本量较小，建议采用交叉验证方法评估模型。')+'</p>';html+='<p><strong>分析方法：</strong>本研究将采用描述性统计、相关性分析、可视化探索等方法对数据进行深入分析，并基于分析结果构建'+t.tags[0]+'预测模型。</p>';html+='</div>';pd.innerHTML=html}
+function switchDataTab(tab,contentId){document.querySelectorAll('.data-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');document.querySelectorAll('.data-tab-content').forEach(c=>c.classList.remove('active'));document.getElementById('tab-'+contentId).classList.add('active')}
+
+// ========== ECharts 主题适配 ==========
+function getChartColors(){
+  const isLight=document.body.classList.contains('light-theme');
+  return isLight?{text:'#1e293b',sub:'#475569',border:'#e2e8f0',primary:'#6366f1',accent:'#10b981'}:{text:'#f1f5f9',sub:'#94a3b8',border:'#1e293b',primary:'#6366f1',accent:'#10b981'};
+}
+
+async function startDefense(){
+  state.defenseIndex=0;state.defenseScore={innovation:0,technique:0,logic:0,presentation:0};
+  state.defenseQuestionsList=[];state.currentQuestionIndex=0;
+  const chat=document.getElementById('chatMessages');chat.innerHTML='';
+  const tn=state.selectedTopic?state.selectedTopic.title:'未选择选题';
+
+  setAIStatus('thinking','正在生成答辩问题...');
+  clearThinkStream(5);
+
+  // 使用Multi-Agent思考流展示答辩准备过程
+  const defenseThinking = [
+    createAgentMsg('qa', 'thinking', '正在加载选题信息，准备答辩问题...'),
+    createAgentMsg('researcher', 'analysis', '分析选题「' + tn + '」的核心技术点和创新方向...'),
+    createAgentMsg('critic', 'thinking', '从评审角度设计挑战性问题...'),
+    createAgentMsg('qa', 'result', '答辩问题已准备就绪，共6个问题'),
+  ];
+  await showAgentThinkingStream(defenseThinking);
+
+  // 调用后端API生成问题
+  try{
+    if(state.sessionId){
+      const res=await api.generateQuestions(state.sessionId,6);
+      if(res.success&&res.questions){
+        state.defenseQuestionsList=res.questions.map((q,i)=>({q:q,score:{innovation:5,technique:5,logic:5,presentation:5},hint:'请认真回答'}));
+        await addThinkMsg(5,'✅','已从后端API获取 '+res.questions.length+' 个答辩问题','success');
+      }
+    }
+  }catch(e){console.warn('[API] generateQuestions failed:',e.message);}
+
+  // 降级：使用默认问题
+  if(!state.defenseQuestionsList.length){
+    state.defenseQuestionsList=defenseQuestions.questions;
+    await addThinkMsg(5,'ℹ️','后端API不可用，使用默认问题','info');
+  }
+
+  addAIMessage('你好！我是你的答辩评委。今天我们将围绕「'+tn+'」进行模拟答辩。请你简要介绍一下这个选题的背景和研究意义。');
+  const qa=document.getElementById('quickQuestions');
+  qa.innerHTML='<span style="font-size:12px;color:var(--text3);margin-right:4px">快捷回复：</span>';
+  ['我准备好了，请开始提问','请先介绍一下你的选题'].forEach(text=>{const b=document.createElement('button');b.className='quick-q';b.textContent=text;b.onclick=()=>{document.getElementById('chatInput').value=text;sendAnswer()};qa.appendChild(b)});
+  setAIStatus('thinking','模拟答辩进行中...');
+  await addThinkMsg(5,'🎓','模拟答辩已开始','success');
+  await addThinkMsg(5,'📋','选题：'+tn,'');
+  await addThinkMsg(5,'❓','共 '+state.defenseQuestionsList.length+' 个问题等待回答','');
+  await addThinkMsg(5,'💡','请认真回答每个问题','');
+}
+
+function askQuestion(index){state.defenseIndex=index+1;const questions=state.defenseQuestionsList.length?state.defenseQuestionsList:defenseQuestions.questions;const q=questions[index];addAIMessage('❓ 问题 '+(index+1)+'/'+questions.length+'：'+q.q);const qa=document.getElementById('quickQuestions');qa.innerHTML='<span style="font-size:12px;color:var(--text3);margin-right:4px">参考回答方向：</span>';const hints=['从实际需求出发，结合学术研究现状','对比多种方案，说明选择理由','从方法、数据、应用三个角度阐述','具体描述遇到的问题和解决过程','给出验证方法和预期效果','展望未来研究方向和改进空间'];const b=document.createElement('button');b.className='quick-q';b.textContent=hints[index]||'请评委继续提问';b.onclick=()=>{document.getElementById('chatInput').value=hints[index]||'请评委继续提问';sendAnswer()};qa.appendChild(b)}
+
+async function sendAnswer(){const input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;input.value='';addUserMessage(text);if(state.defenseIndex===0){state.defenseIndex=1;setTimeout(()=>askQuestion(0),800);return}const qi=state.defenseIndex-1;const questions=state.defenseQuestionsList.length?state.defenseQuestionsList:defenseQuestions.questions;if(qi<questions.length){const q=questions[qi];let score,feedback,level;
+
+// 调用后端API评估
+let usedBackend=false;
+try{
+  if(state.sessionId){
+    setAIStatus('analyzing','正在评估你的回答...');
+    const res=await api.evaluateAnswer(state.sessionId,q.q,text,qi);
+    if(res.success&&res.evaluation){
+      score=res.evaluation.score;
+      feedback=res.evaluation.feedback;
+      level=res.evaluation.level;
+      usedBackend=true;
+      await addThinkMsg(5,'✅','后端API评估完成','success');
+    }
+  }
+}catch(e){console.warn('[API] evaluateAnswer failed:',e.message);}
+
+// 降级：本地评估
+if(!usedBackend){
+  score=evaluateAnswer(text,q.score);
+  feedback=generateFeedback(text,q,score);
+}
+
+Object.entries(score).forEach(([k,v])=>{state.defenseScore[k]+=v});
+setTimeout(()=>{
+  if(usedBackend){
+    const total=Object.values(score).reduce((a,b)=>a+b,0);
+    const emoji=total>=32?'🌟':total>=24?'👍':total>=16?'📝':'💪';
+    addAIMessage(emoji+' 点评（'+level+'）<br><br>'+feedback+'<br><br>得分：创新性 '+score.innovation+' | 技术深度 '+score.technique+' | 逻辑表达 '+score.logic+' | 展示能力 '+score.presentation);
+  }else{
+    addAIMessage(feedback);
+  }
+  setTimeout(()=>{if(qi+1<questions.length)askQuestion(qi+1);else{addAIMessage('✅ 所有提问已完成！你可以点击「查看评分」获取综合评分，也可以点击「重新答辩」再练习一遍。');document.getElementById('quickQuestions').innerHTML='';setAIStatus('done','模拟答辩完成')}},1000)},1000)}}
+
+function evaluateAnswer(text,baseScore){const len=text.length;let score={innovation:0,technique:0,logic:0,presentation:0};
+  
+  // 基础分根据内容长度计算（不再是固定高分）
+  // 字数越少，基础分越低
+  const lengthScore=Math.min(len/10,10); // 最多10分基础分
+  
+  // 技术关键词匹配
+  const techKeywords=['算法','模型','数据','分析','系统','设计','实现','优化','框架','库','API','数据库','前端','后端','网络','接口','协议','架构','部署','测试','训练','预测','分类','回归','聚类','神经网络','深度学习','机器学习'];let techCount=0;techKeywords.forEach(kw=>{if(text.includes(kw))techCount++});score.technique=Math.min(3+techCount*2+Math.floor(len/50),10);
+  
+  // 创新关键词匹配
+  const innovationKeywords=['创新','改进','优化','新','独特','差异','优势','突破','首创','首次','提出','设计','方案','思路'];let innoCount=0;innovationKeywords.forEach(kw=>{if(text.includes(kw))innoCount++});score.innovation=Math.min(2+innoCount*2+Math.floor(len/80),10);
+  
+  // 逻辑性：根据标点符号、连接词、段落结构判断
+  const logicKeywords=['因为','所以','因此','首先','其次','然后','最后','综上所述','总之','但是','然而','此外','另外','同时'];let logicCount=0;logicKeywords.forEach(kw=>{if(text.includes(kw))logicCount++});const hasStructure=text.includes('。')||text.includes('；')||text.includes('\n');score.logic=Math.min(2+logicCount*1.5+(hasStructure?2:0)+Math.floor(len/60),10);
+  
+  // 展示能力：根据字数、标点、格式
+  const sentenceCount=(text.match(/[。！？.!?]/g)||[]).length;score.presentation=Math.min(1+sentenceCount*1.5+Math.floor(len/40),10);
+  
+  // 内容过短的惩罚
+  if(len<5){score.innovation=1;score.technique=1;score.logic=1;score.presentation=1}
+  else if(len<20){score.innovation=Math.min(score.innovation,2);score.technique=Math.min(score.technique,2);score.logic=Math.min(score.logic,2);score.presentation=Math.min(score.presentation,2)}
+  else if(len<50){score.innovation=Math.min(score.innovation,4);score.technique=Math.min(score.technique,4);score.logic=Math.min(score.logic,4);score.presentation=Math.min(score.presentation,4)}
+  
+  Object.keys(score).forEach(k=>score[k]=Math.max(1,Math.min(score[k],10)));return score}
+function generateFeedback(text,q,score){const total=Object.values(score).reduce((a,b)=>a+b,0);const len=text.length;let fb='';
+  
+  // 根据实际得分给出评价（满分40分，每维度10分）
+  if(total>=32){fb='🌟 回答非常全面深入！你对「'+q.q+'」的理解很透彻，展现了扎实的专业功底。'}
+  else if(total>=24){fb='👍 回答质量不错！你对这个问题的把握较好，观点清晰。'}
+  else if(total>=16){fb='📝 回答有一定基础，但可以更深入展开。'}
+  else if(total>=8){fb='💡 回答触及了要点，建议补充更多论据和细节。'}
+  else{fb='⚠️ 回答过于简略，无法有效评估。请认真思考后再作答。'}
+  
+  // 基于内容长度的具体建议
+  if(len<5){fb+='\n\n💬 <strong>内容长度：</strong>你的回答只有'+len+'个字，这远远不够。请至少写50字以上的完整回答。'}
+  else if(len<20){fb+='\n\n💬 <strong>内容长度：</strong>回答仅'+len+'字，过于简短。建议详细阐述你的思路和方法。'}
+  else if(len<50){fb+='\n\n💬 <strong>内容长度：</strong>回答'+len+'字，还可以更详细一些。'}
+  else if(len<100){fb+='\n\n💬 <strong>内容长度：</strong>回答'+len+'字，内容基本充实。'}
+  else{fb+='\n\n💬 <strong>内容长度：</strong>回答'+len+'字，内容充实。'}
+  
+  // 基于关键词的个性化分析
+  const hasExample=text.includes('例如')||text.includes('比如')||text.includes('举例')||text.includes('实例');
+  const hasData=text.includes('数据')||text.includes('统计')||text.includes('结果')||text.includes('实验')||text.includes('测试');
+  const hasCompare=text.includes('对比')||text.includes('比较')||text.includes('区别')||text.includes('优势')||text.includes('vs');
+  const hasConclusion=text.includes('因此')||text.includes('所以')||text.includes('总之')||text.includes('综上所述')||text.includes('结论');
+  
+  fb+='\n\n📊 <strong>维度分析：</strong>';
+  if(score.innovation>=7)fb+='✅ 创新性表现良好('+score.innovation+'分)；';
+  else if(score.innovation>=4)fb+='📝 创新性一般('+score.innovation+'分)；';
+  else fb+='⚠️ 创新性不足('+score.innovation+'分)；';
+  
+  if(score.technique>=7)fb+='✅ 技术深度足够('+score.technique+'分)；';
+  else if(score.technique>=4)fb+='📝 技术深度一般('+score.technique+'分)；';
+  else fb+='⚠️ 技术深度不足('+score.technique+'分)；';
+  
+  if(score.logic>=7)fb+='✅ 逻辑清晰('+score.logic+'分)；';
+  else if(score.logic>=4)fb+='📝 逻辑一般('+score.logic+'分)；';
+  else fb+='⚠️ 逻辑需加强('+score.logic+'分)；';
+  
+  if(score.presentation>=7)fb+='✅ 表达流畅('+score.presentation+'分)。';
+  else if(score.presentation>=4)fb+='📝 表达一般('+score.presentation+'分)。';
+  else fb+='⚠️ 表达需改善('+score.presentation+'分)。';
+  
+  // 具体改进建议
+  fb+='\n\n🎯 <strong>改进建议：</strong>';
+  if(len<20){fb+='\n• 请认真审题，给出完整的回答（建议50字以上）；'}
+  else{
+    if(!hasExample)fb+='\n• 增加具体例子会让回答更有说服力；';
+    if(!hasData)fb+='\n• 适当引用数据或实验结果能增强可信度；';
+    if(!hasCompare)fb+='\n• 与现有方案做对比能更好体现研究价值；';
+    if(!hasConclusion)fb+='\n• 结尾总结能让观点更鲜明。';
+    if(hasExample&&hasData&&hasCompare&&hasConclusion)fb+='\n• 你的回答结构完整，继续保持！';
+  }
+  
+  fb+='\n\n📈 <strong>总分：</strong>'+total+'/40（创新性 '+score.innovation+' | 技术深度 '+score.technique+' | 逻辑表达 '+score.logic+' | 展示能力 '+score.presentation+'）';
+  return fb}
+function addAIMessage(text){const chat=document.getElementById('chatMessages');const d=document.createElement('div');d.className='chat-msg ai';d.innerHTML='<div class="chat-avatar">AI</div><div class="chat-bubble">'+text+'</div>';chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
+function addUserMessage(text){const chat=document.getElementById('chatMessages');const d=document.createElement('div');d.className='chat-msg user';d.innerHTML='<div class="chat-bubble">'+text+'</div><div class="chat-avatar" style="background:linear-gradient(135deg,var(--accent),var(--accent-dark))">我</div>';chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
+
+async function showScore(){
+  let reportHtml='';
+
+  // 尝试从后端获取报告
+  try{
+    if(state.sessionId){
+      const res=await api.getDefenseReport(state.sessionId);
+      if(res.success){
+        const s=res.stats||{};
+        const total=res.overall_score||0;
+        reportHtml='<div class="chat-avatar">📊</div><div class="chat-bubble"><strong>📊 答辩评分报告（后端分析）</strong><br><br>'+
+          '<div style="margin-bottom:8px">创新性：'+(s.avg_innovation||0).toFixed(1)+'/30 <div class="score-bar"><div class="score-fill" style="width:'+((s.avg_innovation||0)/30*100)+'%;background:var(--primary)"></div></div></div>'+
+          '<div style="margin-bottom:8px">技术深度：'+(s.avg_technique||0).toFixed(1)+'/30 <div class="score-bar"><div class="score-fill" style="width:'+((s.avg_technique||0)/30*100)+'%;background:var(--accent)"></div></div></div>'+
+          '<div style="margin-bottom:8px">逻辑表达：'+(s.avg_logic||0).toFixed(1)+'/30 <div class="score-bar"><div class="score-fill" style="width:'+((s.avg_logic||0)/30*100)+'%;background:var(--warn)"></div></div></div>'+
+          '<div style="margin-bottom:8px">展示能力：'+(s.avg_presentation||0).toFixed(1)+'/30 <div class="score-bar"><div class="score-fill" style="width:'+((s.avg_presentation||0)/30*100)+'%;background:#ec4899"></div></div></div>'+
+          '<br><strong>综合得分：'+total+' 分</strong>（满分120分）<br>'+
+          '等级：'+(res.overall_level||'一般')+'<br>'+
+          '回答次数：'+(res.record_count||0)+'<br><br>'+
+          '💡 '+res.advice+'</div>';
+      }
+    }
+  }catch(e){console.warn('[API] getDefenseReport failed:',e.message);}
+
+  // 降级：本地计算
+  if(!reportHtml){
+    const s=state.defenseScore,total=s.innovation+s.technique+s.logic+s.presentation;
+    reportHtml='<div class="chat-avatar">📊</div><div class="chat-bubble"><strong>📊 答辩评分报告（本地计算）</strong><br><br><div style="margin-bottom:8px">创新性：'+s.innovation+'/100 <div class="score-bar"><div class="score-fill" style="width:'+s.innovation+'%;background:var(--primary)"></div></div></div><div style="margin-bottom:8px">技术深度：'+s.technique+'/100 <div class="score-bar"><div class="score-fill" style="width:'+s.technique+'%;background:var(--accent)"></div></div></div><div style="margin-bottom:8px">逻辑表达：'+s.logic+'/100 <div class="score-bar"><div class="score-fill" style="width:'+s.logic+'%;background:var(--warn)"></div></div></div><div style="margin-bottom:8px">展示能力：'+s.presentation+'/100 <div class="score-bar"><div class="score-fill" style="width:'+s.presentation+'%;background:#ec4899"></div></div></div><br><strong>综合得分：'+total+' 分</strong>（满分150分）<br>'+(total>=100?'🏆 表现优秀！答辩准备充分，继续保持！':total>=70?'👍 表现良好！部分问题可以回答得更深入。':'💪 还需要加强准备，建议重新练习一遍。')+'</div>';
+  }
+
+  const chat=document.getElementById('chatMessages'),d=document.createElement('div');
+  d.className='chat-msg ai';d.innerHTML=reportHtml;
+  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;
+}
+
+function showToast(message,type='info'){const t=document.createElement('div');t.className='toast '+type;t.textContent=message;document.body.appendChild(t);requestAnimationFrame(()=>t.classList.add('show'));setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400)},3000)}
+function setAIStatus(s,t){const b=document.getElementById('aiStatusBar'),d=document.getElementById('aiStatusDot'),e=document.getElementById('aiStatusText');b.className='ai-status-bar '+s;d.className='ai-status-dot '+s;if(s==='thinking'||s==='analyzing'||s==='generating'){e.innerHTML=t+'<span class="thinking-dots"><span></span><span></span><span></span></span>'}else{e.textContent=t||'空闲，等待你的操作'}}
+function clearThinkStream(step){const c=document.getElementById('thinkContent');c.innerHTML='<div class="think-title">AI思考流 - 步骤'+step+'</div>'}
+async function addThinkMsg(step,icon,text,type=''){const c=document.getElementById('thinkContent');if(!c.querySelector('.think-title')||!c.querySelector('.think-title').textContent.includes('步骤'+step)){c.innerHTML='<div class="think-title">AI思考流 - 步骤'+step+'</div>'}const d=document.createElement('div');d.className='think-msg '+(type==='success'?'success':type==='warn'?'warn':type==='info'?'info':'');d.innerHTML='<span class="think-icon">'+icon+'</span>'+text+'<span class="think-time">'+new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'</span>';c.appendChild(d);c.scrollTop=c.scrollHeight}
+async function runThinkSequence(step,msgs){for(const m of msgs){await addThinkMsg(step,m.icon,m.text,m.type||'');if(m.delay)await new Promise(r=>setTimeout(r,m.delay))}}
+
+async function enterApp(){
+  // 初始化主题
+  initTheme();
+
+  const ws=document.getElementById('welcomeScreen'),btn=document.getElementById('welcomeBtn'),text=document.getElementById('welcomeText');
+  btn.classList.add('show');
+  await typeWriter(text,'你好！我是你的AI毕业设计助手。\n我将陪伴你完成从选题到答辩的每一步。');
+  await new Promise(r=>setTimeout(r,600));
+  ws.classList.add('hidden');
+  document.getElementById('aiStatusBar').style.display='flex';
+  document.getElementById('mainContainer').classList.add('show');
+  initDeptSelect();
+  
+  // 恢复保存的状态
+  const hasSaved = loadState();
+  if (hasSaved && state.dept) {
+    // 恢复下拉框选择
+    document.getElementById('deptSelect').value = state.dept;
+    onDeptChange();
+    if (state.major) {
+      document.getElementById('majorSelect').value = state.major;
+      onMajorChange();
+      if (state.direction) {
+        document.getElementById('directionSelect').value = state.direction;
+        state.direction = state.direction;
+        document.getElementById('btnToStep2').disabled = false;
+      }
+    }
+    // 恢复步骤显示
+    if (state.currentStep > 1) {
+      document.querySelectorAll('.step-dot').forEach((d,i)=>{
+        d.classList.remove('active','completed');
+        if(i+1<state.currentStep)d.classList.add('completed');
+        else if(i+1===state.currentStep)d.classList.add('active');
+      });
+      document.querySelectorAll('.step-content').forEach(c=>c.classList.remove('active'));
+      document.querySelector('.step-content[data-step="'+state.currentStep+'"]').classList.add('active');
+    }
+    showToast('已恢复上次进度', 'success');
+  }
+  
+  setAIStatus('idle','等待你的操作');
+}
+
+// 拖拽上传
+document.addEventListener('DOMContentLoaded',()=>{const ua=document.getElementById('uploadArea');if(ua){ua.addEventListener('dragover',e=>{e.preventDefault();ua.classList.add('dragover')});ua.addEventListener('dragleave',()=>ua.classList.remove('dragover'));ua.addEventListener('drop',e=>{e.preventDefault();ua.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.csv')){document.getElementById('csvInput').files=e.dataTransfer.files;processCSV(f)}else{showToast('请上传CSV格式文件','error')}})}});
+
+// 欢迎屏幕初始化：延迟显示"开始使用"按钮
+setTimeout(()=>{
+  const btn=document.getElementById('welcomeBtn');
+  if(btn) btn.classList.add('show');
+},800);
+
+// 全局错误处理
+window.onerror=function(msg,url,line){console.error('Error:',msg,'at',url+':'+line);showToast('发生错误：'+msg,'error');return true};
+window.onunhandledrejection=function(e){console.error('Unhandled:',e.reason);showToast('异步错误：'+(e.reason&&e.reason.message||e.reason),'error')};
+
+// 页面加载时立即应用主题（避免闪烁）
+initTheme();
+</script>
+</body>
+</html>

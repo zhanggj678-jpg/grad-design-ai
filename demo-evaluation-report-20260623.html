@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI毕业设计全流程助手 — 评测报告</title>
+<style>
+:root{--green:#00ff9f;--bg:#0f0f1a;--card:#1a1a2e;--white:#ffffff;--gray:#999999;--red:#ff6b6b;--teal:#4ecdc4;--gold:#ffd700;--purple:#a855f7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--white);font-family:'Noto Sans SC',sans-serif}
+.report{max-width:700px;margin:0 auto;padding:32px 16px}
+.report-header{text-align:center;margin-bottom:32px}
+.report-header h1{font-family:'Press Start 2P',monospace;font-size:18px;color:var(--green);margin-bottom:8px}
+.report-header .meta{font-size:13px;color:var(--gray)}
+.level-card{border:3px solid var(--green);padding:24px;text-align:center;margin-bottom:24px;background:var(--card)}
+.level-card .level{font-family:'Press Start 2P',monospace;font-size:36px;margin-bottom:8px}
+.level-card .level-label{font-size:14px;color:var(--gray)}
+.radar-section{margin-bottom:24px}
+.radar-section h2{font-family:'Press Start 2P',monospace;font-size:12px;color:var(--green);margin-bottom:16px}
+.radar-section canvas{display:block;margin:0 auto}
+.radar-section .note{text-align:center;font-size:11px;color:var(--gray);margin-top:8px}
+.turn-section{margin-bottom:24px}
+.turn-section h2{font-family:'Press Start 2P',monospace;font-size:12px;color:var(--green);margin-bottom:16px}
+.turn-card{border:2px solid rgba(0,255,159,0.3);padding:16px;margin-bottom:12px;background:var(--card)}
+.turn-card.turned{border-color:var(--green)}
+.turn-card.not-turned{border-color:var(--red)}
+.turn-card .judge-name{font-weight:700;font-size:14px;margin-bottom:4px}
+.turn-card .dimension{font-size:12px;color:var(--gray);margin-bottom:8px}
+.turn-card .result{font-family:'Press Start 2P',monospace;font-size:11px;margin-bottom:4px}
+.turn-card .reaction{font-size:13px;line-height:1.6;color:rgba(255,255,255,0.8)}
+.coach-section{border:3px solid var(--red);padding:20px;margin-bottom:24px;background:var(--card)}
+.coach-section h2{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--red);margin-bottom:16px}
+.coach-item{padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.coach-item:last-child{border-bottom:none}
+.coach-item .label{font-size:12px;color:var(--red);font-weight:700}
+.coach-item .text{font-size:14px;margin:4px 0}
+.coach-item .impact{font-size:9px;color:var(--green);font-family:'Press Start 2P',monospace}
+.todo-section{border:3px solid var(--green);padding:20px;margin-bottom:24px;background:var(--card)}
+.todo-section h2{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--green);margin-bottom:16px}
+.todo-item{padding:12px;background:rgba(0,0,0,0.2);border:2px solid rgba(0,255,159,0.15);margin-bottom:8px}
+.todo-item .action{font-weight:700;font-size:14px;margin-bottom:4px}
+.todo-item .effect{font-size:12px;color:var(--green)}
+.code-section{border:3px solid var(--teal);padding:20px;margin-bottom:24px;background:var(--card)}
+.code-section h2{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--teal);margin-bottom:16px}
+.code-item{padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.code-item:last-child{border-bottom:none}
+.code-item .severity{font-size:11px;font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;margin-bottom:4px}
+.code-item .severity.critical{background:rgba(255,71,87,0.2);color:var(--red)}
+.code-item .severity.warning{background:rgba(255,217,61,0.2);color:var(--gold)}
+.code-item .severity.info{background:rgba(78,205,196,0.2);color:var(--teal)}
+.code-item .location{font-size:12px;color:var(--gray);margin-bottom:4px}
+.code-item .desc{font-size:14px;margin-bottom:4px}
+.code-item .fix{font-size:12px;color:var(--teal)}
+.material-section{border:3px solid var(--purple);padding:20px;margin-bottom:24px;background:var(--card)}
+.material-section h2{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--purple);margin-bottom:16px}
+.material-item{padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center}
+.material-item:last-child{border-bottom:none}
+.material-item .name{font-size:14px}
+.material-item .status{font-size:12px;font-weight:700}
+.material-item .status.ok{color:var(--green)}
+.material-item .status.missing{color:var(--red)}
+.material-score{text-align:center;font-size:24px;font-weight:700;color:var(--purple);margin-top:12px}
+</style>
+</head>
+<body>
+<div class="report">
+  <div class="report-header">
+    <h1>AI毕业设计全流程助手</h1>
+    <div class="meta">学习工作赛道 · 2026-06-23 14:30</div>
+  </div>
+  <div class="level-card">
+    <div class="level" style="color:#c084fc">SR</div>
+    <div class="level-label">稀有 · 4星 · 加权总分 8.1/10</div>
+  </div>
+
+  <div class="material-section">
+    <h2>材料体检</h2>
+    <div class="material-item"><span class="name">可体验Demo（HTML文件或部署链接）</span><span class="status ok">✅ 有</span></div>
+    <div class="material-item"><span class="name">截图 >= 3张</span><span class="status missing">❌ 无</span></div>
+    <div class="material-item"><span class="name">Session ID >= 3个</span><span class="status missing">❌ 无</span></div>
+    <div class="material-item"><span class="name">帖子4部分齐全（简介+创作思路+体验地址+TRAE实践）</span><span class="status missing">❌ 无</span></div>
+    <div class="material-item"><span class="name">项目信息完整（项目名/赛道/目标用户/核心功能）</span><span class="status ok">✅ 有</span></div>
+    <div class="material-item"><span class="name">标题格式规范（含【XX赛道】）</span><span class="status missing">❌ 无</span></div>
+    <div class="material-score">材料完整度：35/100</div>
+  </div>
+
+  <div class="radar-section">
+    <h2>四维评分</h2>
+    <canvas id="radar-4d" width="300" height="300"></canvas>
+    <div class="note">创新性 8.0 | 实用性 8.5 | 完成度 7.5 | 美观度 8.5</div>
+  </div>
+
+  <div class="turn-section">
+    <h2>4席转身</h2>
+    <div class="turn-card turned">
+      <div class="judge-name">技术楼教主</div>
+      <div class="dimension">创新性 · 8.0/10</div>
+      <div class="result">✅ 转身！</div>
+      <div class="reaction">"选题→研究→数据→答辩"五步闭环设计有新意，WorkflowAgent状态机控制流程是技术亮点。349个预设选题覆盖12个学院100+专业，LLM统一入口支持多模型切换，这些在毕业设计辅助工具中不多见。扣分：没有真正的RAG检索（只是静态题库），AI生成内容缺少引用溯源。</div>
+    </div>
+    <div class="turn-card turned">
+      <div class="judge-name">投资老胡</div>
+      <div class="dimension">实用性 · 8.5/10</div>
+      <div class="result">✅ 转身！</div>
+      <div class="reaction">目标用户（大学生）明确，痛点（毕业设计迷茫）真实。CSV数据分析用Pandas+NumPy真实计算，不是前端模拟。模拟答辩有AI评分+关键词检测+报告导出，实用价值高。扣分：缺少真实用户验证数据，没有对比实验（用工具前后效率提升多少）。</div>
+    </div>
+    <div class="turn-card turned">
+      <div class="judge-name">产品快刀</div>
+      <div class="dimension">完成度 · 7.5/10</div>
+      <div class="result">✅ 转身！</div>
+      <div class="reaction">核心链路完整：专业选择→选题生成→研究计划→CSV分析→模拟答辩→报告导出。后端分层架构（api/service/core/database）专业，JWT认证、SQLite持久化、操作日志都有。扣分：requirements.txt缺少python-multipart（文件上传必崩），CORS配置为"*"（安全隐患），没有README.md，没有截图。</div>
+    </div>
+    <div class="turn-card turned">
+      <div class="judge-name">内容Tim</div>
+      <div class="dimension">美观度 · 8.5/10</div>
+      <div class="result">✅ 转身！</div>
+      <div class="reaction">AI生命感UI设计出色：顶部AI状态栏、右侧AI思考流、欢迎页登场动画、脉冲呼吸效果、卡片化布局。暗色主题+渐变配色有高级感。ECharts图表可视化专业。扣分：缺少响应式适配（手机端体验差），没有加载骨架屏。</div>
+    </div>
+  </div>
+
+  <div class="coach-section">
+    <h2>残酷教练</h2>
+    <div class="coach-item">
+      <div class="label">今晚必改</div>
+      <div class="text">在requirements.txt第16行添加"python-multipart>=0.0.6"，否则文件上传功能必崩</div>
+      <div class="impact">完成度+1.5分 → 2分钟 → 产品问题</div>
+    </div>
+    <div class="coach-item">
+      <div class="label">提分最高</div>
+      <div class="text">创建README.md，包含项目介绍、5张功能截图、安装步骤、部署链接。这是材料完整度从35→85的最快路径</div>
+      <div class="impact">材料完整度+50分 → 30分钟 → 讲法问题</div>
+    </div>
+    <div class="coach-item">
+      <div class="label">别浪费时间</div>
+      <div class="text">不要花大量时间做真正的RAG向量检索，初赛评委不会深入测试技术细节，当前静态题库+LLM生成已够用</div>
+      <div class="impact">节省3小时 → 产品问题</div>
+    </div>
+  </div>
+
+  <div class="code-section">
+    <h2>代码体检</h2>
+    <div class="code-item">
+      <span class="severity critical">安全</span>
+      <div class="location">main.py · 第37行</div>
+      <div class="desc">CORS配置allow_origins=["*"]允许任意域名访问，生产环境存在安全风险</div>
+      <div class="fix">修复：改为allow_origins=["https://你的域名.com"]或从环境变量读取</div>
+    </div>
+    <div class="code-item">
+      <span class="severity critical">安全</span>
+      <div class="location">auth_service.py · 第78行</div>
+      <div class="desc">JWT_SECRET使用os.getenv默认值secrets.token_hex(32)，每次重启服务会改变，导致所有Token失效</div>
+      <div class="fix">修复：强制从环境变量读取，无值时抛异常阻止启动</div>
+    </div>
+    <div class="code-item">
+      <span class="severity warning">性能</span>
+      <div class="location">llm.py · 第47行</div>
+      <div class="desc">base_url硬编码为智谱AI地址，切换供应商时需改代码</div>
+      <div class="fix">修复：改为从环境变量LLM_BASE_URL读取，默认保持当前值</div>
+    </div>
+    <div class="code-item">
+      <span class="severity info">规范</span>
+      <div class="location">requirements.txt · 第16行</div>
+      <div class="desc">缺少python-multipart依赖，FastAPI文件上传会报错</div>
+      <div class="fix">修复：添加"python-multipart>=0.0.6"</div>
+    </div>
+  </div>
+
+  <div class="todo-section">
+    <h2>待办清单</h2>
+    <div class="todo-item">
+      <div class="action">1. 创建README.md（项目介绍 + 功能截图 + 安装步骤）</div>
+      <div class="effect">材料完整度+20分，完成度+2分</div>
+    </div>
+    <div class="todo-item">
+      <div class="action">2. 截取3-5张核心功能截图保存到screenshots/</div>
+      <div class="effect">材料完整度+15分，美观度+1分</div>
+    </div>
+    <div class="todo-item">
+      <div class="action">3. 准备大赛帖子文案（简介+创作思路+体验地址+TRAE实践）</div>
+      <div class="effect">材料完整度+20分，实用性+2分</div>
+    </div>
+    <div class="todo-item">
+      <div class="action">4. 部署到Render.com获取公网访问地址</div>
+      <div class="effect">材料完整度+10分，实用性+2分</div>
+    </div>
+    <div class="todo-item">
+      <div class="action">5. 在requirements.txt添加python-multipart</div>
+      <div class="effect">完成度+1.5分，修复致命依赖缺失</div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var DATA=[{"name":"创新性","score":8.0,"max":10,"turned":true},{"name":"实用性","score":8.5,"max":10,"turned":true},{"name":"完成度","score":7.5,"max":10,"turned":true},{"name":"美观度","score":8.5,"max":10,"turned":true}];
+  var canvas=document.getElementById('radar-4d');
+  if(!canvas||!canvas.getContext)return;
+  var ctx=canvas.getContext('2d');
+  var dpr=window.devicePixelRatio||1;
+  canvas.width=300*dpr;canvas.height=300*dpr;
+  canvas.style.width='300px';canvas.style.height='300px';
+  ctx.scale(dpr,dpr);
+  var cx=150,cy=150,R=120,axes=DATA.length,step=2*Math.PI/axes,start=-Math.PI/2;
+  for(var l=1;l<=3;l++){var r=R*l/3;ctx.beginPath();for(var i=0;i<=axes;i++){var a=start+i*step;var x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}ctx.closePath();ctx.strokeStyle='rgba(0,255,159,0.15)';ctx.stroke()}
+  for(var i=0;i<axes;i++){var a=start+i*step;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.strokeStyle='rgba(0,255,159,0.1)';ctx.stroke()}
+  ctx.beginPath();
+  for(var i=0;i<=axes;i++){var idx=i%axes;var ratio=DATA[idx].score/DATA[idx].max;var r=R*Math.max(0.05,ratio);var a=start+idx*step;var x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)}
+  ctx.closePath();ctx.fillStyle='rgba(0,255,159,0.2)';ctx.fill();ctx.strokeStyle='#00ff9f';ctx.lineWidth=2;ctx.stroke();
+  for(var i=0;i<axes;i++){var ratio=DATA[i].score/DATA[i].max;var r=R*Math.max(0.05,ratio);var a=start+i*step;ctx.beginPath();ctx.arc(cx+r*Math.cos(a),cy+r*Math.sin(a),4,0,2*Math.PI);ctx.fillStyle=DATA[i].turned!==false?'#00ff9f':'#ff4757';ctx.fill()}
+  ctx.font='12px sans-serif';ctx.fillStyle='#999';ctx.textAlign='center';
+  for(var i=0;i<axes;i++){var a=start+i*step;ctx.fillText(DATA[i].name,cx+(R+24)*Math.cos(a),cy+(R+24)*Math.sin(a))}
+})();
+</script>
+</body>
+</html>
