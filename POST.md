@@ -57,7 +57,7 @@
 4. `python -m uvicorn main:app --reload --port 8001`
 5. 浏览器打开 `rag-grad-assistant-demo.html`
 
-**在线体验**：（部署中，稍后更新）
+**在线体验**：[https://grad-design-ai.onrender.com/app](https://grad-design-ai.onrender.com/app)
 
 ---
 
@@ -128,13 +128,13 @@
 - 前端：HTML + CSS + JS + ECharts + PapaParse
 - 后端：FastAPI + SQLite + Pandas + NumPy
 - AI：智谱AI GLM-4（统一LLM入口，支持多模型切换）
-- 部署：Render.com（后端）+ Vercel（前端）
+- 部署：Render.com 免费实例
 
 ---
 
 ## 开源地址
 
-GitHub：（稍后更新）
+GitHub：[zhanggj678-jpg/grad-design-ai](https://github.com/zhanggj678-jpg/grad-design-ai)
 
 ---
 
