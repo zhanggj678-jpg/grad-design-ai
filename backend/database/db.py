@@ -31,8 +31,9 @@ def get_db_connection():
             cursor = conn.execute("SELECT * FROM users")
             rows = cursor.fetchall()
     """
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
     conn.row_factory = sqlite3.Row  # 让结果可以通过列名访问
+    conn.execute("PRAGMA journal_mode=WAL")  # 提升并发写入能力
     try:
         yield conn
         conn.commit()

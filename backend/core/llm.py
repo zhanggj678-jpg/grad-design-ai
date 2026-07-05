@@ -43,8 +43,11 @@ class LLMConfig:
             elif self.provider == "qwen":
                 self.model = "qwen-turbo"
 
-        # 设置默认API地址
-        if not self.api_base:
+        # 设置默认API地址（支持LLM_BASE_URL环境变量覆盖）
+        base_url = os.getenv("LLM_BASE_URL", "")
+        if base_url:
+            self.api_base = base_url
+        elif not self.api_base:
             if self.provider == "zhipu":
                 self.api_base = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
             elif self.provider == "openai":

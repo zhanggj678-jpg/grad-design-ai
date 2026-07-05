@@ -1722,7 +1722,7 @@ setTimeout(()=>{
   if(usedBackend){
     const total=Object.values(score).reduce((a,b)=>a+b,0);
     const emoji=total>=32?'🌟':total>=24?'👍':total>=16?'📝':'💪';
-    addAIMessage(emoji+' 点评（'+level+'）<br><br>'+feedback+'<br><br>得分：创新性 '+score.innovation+' | 技术深度 '+score.technique+' | 逻辑表达 '+score.logic+' | 展示能力 '+score.presentation);
+    addAIHtmlMessage(emoji+' 点评（'+level+'）<br><br>'+escapeHtml(feedback)+'<br><br>得分：创新性 '+score.innovation+' | 技术深度 '+score.technique+' | 逻辑表达 '+score.logic+' | 展示能力 '+score.presentation);
   }else{
     addAIMessage(feedback);
   }
@@ -1805,6 +1805,7 @@ function generateFeedback(text,q,score){const total=Object.values(score).reduce(
   fb+='\n\n📈 <strong>总分：</strong>'+total+'/40（创新性 '+score.innovation+' | 技术深度 '+score.technique+' | 逻辑表达 '+score.logic+' | 展示能力 '+score.presentation+'）';
   return fb}
 function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function addAIHtmlMessage(html){const chat=document.getElementById('chatMessages');const d=document.createElement('div');d.className='chat-msg ai';d.innerHTML='<div class="chat-avatar">AI</div><div class="chat-bubble">'+html+'</div>';chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
 function addAIMessage(text){const chat=document.getElementById('chatMessages');const d=document.createElement('div');d.className='chat-msg ai';d.innerHTML='<div class="chat-avatar">AI</div><div class="chat-bubble">'+escapeHtml(text)+'</div>';chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
 function addUserMessage(text){const chat=document.getElementById('chatMessages');const d=document.createElement('div');d.className='chat-msg user';d.innerHTML='<div class="chat-bubble">'+escapeHtml(text)+'</div><div class="chat-avatar" style="background:linear-gradient(135deg,var(--accent),var(--accent-dark))">我</div>';chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
 
