@@ -262,22 +262,37 @@ class WorkflowAgent:
             "defense_score": session.defense_score
         }
 
-    def recommend_next_step(self, session_id: str) -> str:
+    def recommend_next_step(self, session_id: str) -> dict:
         """推荐下一步"""
         session = self.get_session(session_id)
         if not session:
-            return "请先创建会话"
+            return {"session_id": session_id, "current_stage": "init", "error": "会话不存在"}
 
-        recommendations = {
+        stages = ["init", "topic", "research", "data", "defense", "report"]
+        next_map = {
+            "init": "topic", "topic": "research", "research": "data",
+            "data": "defense", "defense": "report"
+        }
+        action_map = {
             "init": "请填写基本信息（院系、专业、研究方向）",
             "topic": "请选择一个合适的毕业设计选题",
             "research": "请查看AI生成的研究方案，开始设计实验",
             "data": "请上传数据文件进行分析",
             "defense": "请开始模拟答辩练习",
-            "report": "您可以查看答辩报告和评分"
+            "report": "您可以查看答辩报告和评分，恭喜完成！"
         }
-
-        return recommendations.get(session.current_stage, "继续完善您的毕业设计")
+        stage = session.current_stage
+        next_stage = next_map.get(stage, "")
+        return {
+            "session_id": session_id,
+            "current_stage": stage,
+            "next_stage": next_stage,
+            "next_action": action_map.get(stage, "继续完善您的毕业设计"),
+            "reason": f"当前处于 {stage} 阶段",
+            "progress": stages.index(stage) + 1 if stage in stages else 0,
+            "completed_steps": stages[:stages.index(stage)] if stage in stages else [],
+            "total_steps": len(stages)
+        }
 
     def _get_or_create(self, session_id: str) -> SessionState:
         """获取或创建会话"""

@@ -54,8 +54,10 @@ async def upload_csv(
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="只支持CSV文件")
     
-    # 读取文件内容
-    content = await file.read()
+    # 读取文件内容（限制10MB）
+    content = await file.read(10 * 1024 * 1024 + 1)
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="文件大小不能超过10MB")
     try:
         csv_text = content.decode('utf-8')
     except UnicodeDecodeError:
