@@ -911,9 +911,11 @@ async function generateTopics(){
       const res=await api.generateTopics(state.sessionId,dept,major,direction,4);
       if(res.success&&res.topics){
         topics=res.topics.map(t=>({title:t.title,desc:t.description||t.desc,diff:t.difficulty||t.diff||3,tags:t.tags||[],id:t.id}));
-        // 如果后端返回了思考流数据，展示Agent思考流
-        if(res.thinking&&res.thinking.length){
-          await showAgentThinkingStream(res.thinking);
+        // 如果后端返回了Multi-Agent思考流数据，展示Agent思考流
+        const thinkingData=res.thinking||res.agent_messages||[];
+        if(thinkingData.length){
+          const thinkMsgs=thinkingData.map(m=>createAgentMsg(m.role||'analyst',m.type||'analysis',m.content));
+          await showAgentThinkingStream(thinkMsgs);
         }else{
           await addThinkMsg(2,'✅','已从后端API获取 '+topics.length+' 个推荐选题','success');
         }

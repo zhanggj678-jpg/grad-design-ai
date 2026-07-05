@@ -43,13 +43,36 @@ class DefenseService:
         topic = session.selected_topic
         major = session.major
 
-        # 尝试用LLM生成个性化问题
+        # 尝试用 Multi-Agent（DefenseJudgeAgent）生成个性化问题
         llm = get_llm_client()
         questions = []
+        agent_messages = []
 
         if llm.config.api_key:
             try:
-                system_prompt = """你是一位毕业设计答辩评委。请根据学生的选题，生成具体、有深度的答辩问题。
+                # 尝试 Multi-Agent 流程
+                from core.multi_agent import MultiAgentOrchestrator, DefenseJudgeAgent
+                orchestrator = MultiAgentOrchestrator()
+                topic_title = topic.get('title', '') if isinstance(topic, dict) else str(topic)
+                topic_desc = topic.get('description', '') if isinstance(topic, dict) else ''
+                context = {
+                    "topic": topic_title,
+                    "description": topic_desc,
+                    "major": major,
+                    "count": count
+                }
+                result = await orchestrator.run_pipeline([DefenseJudgeAgent()], context)
+                if result:
+                    exec_result = result.get("results", {}).get("defense_judge", {})
+                    if exec_result.get("questions"):
+                        questions = exec_result["questions"]
+                    # 提取 Agent 思考流消息
+                    thinking = result.get("thinking", [])
+                    agent_messages = [{"role": m.role.value, "content": m.content, "type": m.message_type} for m in thinking]
+            except Exception:
+                # Multi-Agent 失败，降级为直接 LLM 调用
+                try:
+                    system_prompt = """你是一位毕业设计答辩评委。请根据学生的选题，生成具体、有深度的答辩问题。
 
 要求：
 1. 问题要针对选题的具体内容
@@ -59,30 +82,30 @@ class DefenseService:
 
 示例：["请介绍一下选题的背景？", "你采用了什么技术方案？"]"""
 
-                user_prompt = f"""专业：{major}
+                    user_prompt = f"""专业：{major}
 选题：{topic.get('title', '')}
 描述：{topic.get('description', '')}
 
 请生成{count}个答辩问题。"""
 
-                response = await llm.chat(
-                    messages=[{"role": "user", "content": user_prompt}],
-                    system_prompt=system_prompt,
-                    temperature=0.8
-                )
+                    response = await llm.chat(
+                        messages=[{"role": "user", "content": user_prompt}],
+                        system_prompt=system_prompt,
+                        temperature=0.8
+                    )
 
-                import json
-                import re
-                try:
-                    json_match = re.search(r'\[.*\]', response, re.DOTALL)
-                    if json_match:
-                        questions = json.loads(json_match.group())
-                    else:
-                        questions = json.loads(response)
+                    import json
+                    import re
+                    try:
+                        json_match = re.search(r'\[.*\]', response, re.DOTALL)
+                        if json_match:
+                            questions = json.loads(json_match.group())
+                        else:
+                            questions = json.loads(response)
+                    except Exception:
+                        questions = []
                 except Exception:
                     questions = []
-            except Exception:
-                questions = []
 
         # 如果LLM没有返回问题，使用默认问题
         if not questions or not isinstance(questions, list):
@@ -99,7 +122,8 @@ class DefenseService:
         return {
             "success": True,
             "session_id": session_id,
-            "questions": questions
+            "questions": questions,
+            "agent_messages": agent_messages
         }
 
     @staticmethod

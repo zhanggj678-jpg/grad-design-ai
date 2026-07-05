@@ -53,6 +53,7 @@
 3. **真实数据分析**：使用Pandas+NumPy进行真实计算，不是前端模拟
 4. **智能流程控制**：WorkflowAgent根据用户当前进度推荐下一步
 5. **100+个预设选题**：覆盖11个学院37个专业，LLM在此基础上生成个性化选题
+6. **Multi-Agent 多智能体协作**：选题生成由 TopicAnalystAgent 完成（内调 RAG 学术检索），答辩问题由 DefenseJudgeAgent 生成，真实多 Agent 流水线运行
 
 ---
 

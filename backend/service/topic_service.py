@@ -31,9 +31,32 @@ class TopicService:
         agent.select_major(session_id, dept, major, direction)
         SessionCRUD.update_major(session_id, dept, major, direction)
 
-        # 调用LLM生成选题
+        # 调用LLM生成选题（优先使用 Multi-Agent）
         llm = get_llm_client()
-        topics = await llm.generate_topics(major, direction, count)
+        topics = []
+        agent_messages = []
+
+        if llm.config.api_key:
+            try:
+                from core.multi_agent import MultiAgentOrchestrator, TopicAnalystAgent
+                orchestrator = MultiAgentOrchestrator()
+                context = {
+                    "major": major,
+                    "direction": direction,
+                    "count": count
+                }
+                result = await orchestrator.run_pipeline([TopicAnalystAgent()], context)
+                if result:
+                    exec_result = result.get("results", {}).get("topic_analyst", {})
+                    if exec_result.get("topics"):
+                        topics = exec_result["topics"]
+                    thinking = result.get("thinking", [])
+                    agent_messages = [{"role": m.role.value, "content": m.content, "type": m.message_type} for m in thinking]
+            except Exception:
+                # Multi-Agent 失败，降级为直接 LLM 调用
+                topics = await llm.generate_topics(major, direction, count)
+        else:
+            topics = await llm.generate_topics(major, direction, count)
 
         # 保存到数据库
         saved_topics = []
@@ -58,7 +81,8 @@ class TopicService:
             "session_id": session_id,
             "major": major,
             "direction": direction,
-            "topics": saved_topics
+            "topics": saved_topics,
+            "agent_messages": agent_messages
         }
 
     @staticmethod
